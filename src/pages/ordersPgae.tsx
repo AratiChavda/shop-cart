@@ -132,7 +132,7 @@ const OrderTimeline: React.FC<{ orders: Order[]; isActive: boolean }> = ({
         return [];
     }
   };
-
+  console.log(isActive);
   return (
     <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-1.5 bg-gradient-to-b from-primary to-primary/20"></div>

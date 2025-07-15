@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useCart } from "@/context/CartContext";
+import { useCart } from "@/context/cartContext";
 
 const CheckoutPage = () => {
   const [paymentMethod, setPaymentMethod] = useState("credit");
