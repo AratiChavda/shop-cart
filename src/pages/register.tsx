@@ -1,0 +1,332 @@
+import { motion } from "framer-motion";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormLabel,
+  FormMessage,
+  FormItem,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useNavigate } from "react-router-dom";
+import { useClient } from "@/hooks/useClient";
+
+const registerSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  middleInitial: z.string().max(1).optional(),
+  lastName: z.string().min(1, "Last name is required"),
+  organization: z.string().optional(),
+  department: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email("Please enter a valid email address"),
+  addressType: z.enum(["business", "residential", "other"], {
+    required_error: "Please select an address type",
+  }),
+  addressLine1: z.string().min(1, "Address Line 1 required"),
+  addressLine2: z.string().optional(),
+  addressLine3: z.string().optional(),
+  city: z.string().min(1, "City is required"),
+  postalCode: z.string().min(1, "Postal code required"),
+  state: z.string().min(1, "State/Province required"),
+  country: z.string().min(1, "Country is required"),
+});
+
+type RegisterFormValues = z.infer<typeof registerSchema>;
+
+export function Register() {
+  const { logo } = useClient();
+  const navigate = useNavigate();
+
+  const form = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    mode: "all",
+    defaultValues: {
+      firstName: "",
+      middleInitial: "",
+      lastName: "",
+      organization: "",
+      department: "",
+      phone: "",
+      email: "",
+      addressType: undefined,
+      addressLine1: "",
+      addressLine2: "",
+      addressLine3: "",
+      city: "",
+      postalCode: "",
+      state: "",
+      country: "",
+    },
+  });
+
+  const onSubmit = async (data: RegisterFormValues) => {
+    console.log("Registration data:", data);
+    navigate("/login");
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-4xl bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-6 md:p-8"
+      >
+        <div className="text-center mb-8">
+          <motion.img
+            src={logo}
+            alt="Company Logo"
+            className="mx-auto h-16 mb-4"
+            initial={{ scale: 0.8 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.3 }}
+          />
+          <motion.h1 className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
+            Create Your Account
+          </motion.h1>
+          <p className="mt-2 text-gray-600">Join us today!</p>
+          <p className="mt-2 text-sm text-gray-600">
+            * Your login credentials will be emailed to you after you click on
+            SAVE.
+          </p>
+        </div>
+
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="grid grid-cols-2 gap-4"
+          >
+            <FormField
+              control={form.control}
+              name="firstName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>First Name *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your first name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="middleInitial"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Middle Initial</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your middle initial" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="lastName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Last Name *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your last name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="organization"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Organization</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your organization" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="department"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Department</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your department" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your phone number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email Address *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="you@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="addressType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address Type *</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select address type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="business">Business</SelectItem>
+                      <SelectItem value="residential">Residential</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="addressLine1"
+              render={({ field }) => (
+                <FormItem className="col-span-2">
+                  <FormLabel>Address Line 1 *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your Address Line 1" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="addressLine2"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address Line 2</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your Address Line 2" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="addressLine3"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address Line 3</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your Address Line 3" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your city" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="postalCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>ZIP/Postal Code *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your ZIP/Postal Code" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="state"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>State/Province *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your State/Province" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="country"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Country *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your country" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <motion.div
+              whileTap={{ scale: 0.98 }}
+              className="flex justify-end w-full col-span-2 gap-2"
+            >
+              <Button type="submit">Save</Button>
+              <Button variant="outline" onClick={() => navigate("/")}>
+                Cancel
+              </Button>
+            </motion.div>
+          </form>
+        </Form>
+      </motion.div>
+    </div>
+  );
+}
