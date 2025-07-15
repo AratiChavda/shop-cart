@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Menu, X, User, LogOut } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useClient } from "@/hooks/useClient";
 import { useAuth } from "@/context/authContext";
@@ -23,12 +23,21 @@ export const Header = ({ cartItems = [], userName = "Guest" }) => {
   const location = useLocation();
   const { logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [navMenu, setNavMenu] = useState<{ title: string; url: string }[]>([]);
 
-  const navMenu = [
-    { title: "Dashboard", url: "/dashboard" },
-    { title: "Orders", url: "/dashboard/orders" },
-    // { title: "Contact Us", url: "/dashboard/contact" },
-  ];
+  useEffect(() => {
+    if (isAdmin) {
+      setNavMenu([
+        { title: "Dashboard", url: "/dashboard" },
+        { title: "Orders", url: "/dashboard/orders" },
+      ]);
+    } else {
+      setNavMenu([
+        { title: "Orders", url: "/dashboard/orders" },
+        { title: "Journal", url: "/journal?jcode=unpabr" },
+      ]);
+    }
+  }, [isAdmin]);
 
   const menuVariants = {
     closed: { y: "-100%", opacity: 0 },
