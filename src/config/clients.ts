@@ -50,7 +50,7 @@ export type ClientKey = keyof typeof clients;
 
 export const getClientKey = (): ClientKey => {
   if (import.meta.env.DEV) {
-    return (import.meta.env.VITE_THINK365_CLIENT as ClientKey) || "THINK365";
+    return (import.meta.env.VITE_THINK365_CLIENT as ClientKey) || "UCP";
   }
   const host = window.location.hostname;
   const subdomain = host.split(".")[0].toUpperCase() as ClientKey;
