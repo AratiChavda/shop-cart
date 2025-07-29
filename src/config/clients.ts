@@ -55,7 +55,7 @@ export const getClientKey = (): ClientKey => {
   const host = window.location.hostname;
   const subdomain = host.split(".")[0].toUpperCase() as ClientKey;
 
-  return subdomain in clients ? subdomain : "THINK365";
+  return subdomain in clients ? subdomain : "UCP";
 };
 
 export const currentClient = clients[getClientKey()];
