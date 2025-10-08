@@ -85,6 +85,8 @@ const CustomerPage = () => {
 
   const {
     paginatedData,
+    pageSize,
+    setPageSize,
     page,
     setPage,
     pageCount,
@@ -270,8 +272,10 @@ const CustomerPage = () => {
 
       <DataTablePagination
         currentPage={page}
+        pageSize={pageSize}
         pageCount={pageCount}
         onPageChange={setPage}
+        onPageSizeChange={setPageSize}
       />
     </div>
   );

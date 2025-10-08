@@ -1,44 +1,85 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PlusIcon, TruckIcon } from "lucide-react";
-import { AddressForm, addressSchema } from "@/pages/addressForm";
-
-type Address = z.infer<typeof addressSchema> & {
-  id: string;
-  isDefault: boolean;
-};
+import { AddressForm } from "@/pages/addressForm";
+import { useUser } from "@/hooks/useUser";
+import { fetchEntityData } from "@/api/apiServices";
+import { toast } from "sonner";
+import type { Address } from "@/types";
+import { ADDRESS_CATEGORY } from "@/constant/common";
 
 export const ShippingAddress = () => {
+  const { user } = useUser();
+  const [address, setAddress] = useState<any>(null);
   const [shippingAddresses, setShippingAddresses] = useState<Address[]>([]);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
 
-  const onShippingSubmit = (values: z.infer<typeof addressSchema>) => {
-    console.log("Shipping address added:", values);
-    const newAddress = {
-      ...values,
-      id: `addr-${Date.now()}`,
-      isDefault: shippingAddresses.length === 0,
-    };
-    setShippingAddresses([...shippingAddresses, newAddress]);
+  const fetchShippingAddresses = useCallback(async () => {
+    if (!user?.customer.customerId) return;
+    try {
+      const payload = {
+        class: "CustomerDetails",
+        fields: "customerAddresses",
+        filters: [
+          {
+            path: "customerId",
+            operator: "equals",
+            value: user?.customer.customerId.toString(),
+          },
+          {
+            path: "customerAddresses.address.addressCategory",
+            operator: "in",
+            value: ADDRESS_CATEGORY.SHIPPING,
+          },
+        ],
+      };
+      const response = await fetchEntityData(payload);
+      if (response.content?.length) {
+        setShippingAddresses(
+          response.content?.[0]?.customerAddresses?.map((addr: any) => ({
+            ...addr?.address,
+          })) || []
+        );
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Failed to fetch shipping addresses");
+    }
+  }, [user?.customer.customerId]);
+
+  useEffect(() => {
+    fetchShippingAddresses();
+  }, [fetchShippingAddresses]);
+
+  const onCancel = () => {
+    fetchShippingAddresses();
+    setAddress(null);
     setIsAddingAddress(false);
   };
 
-  const setDefaultShippingAddress = (id: string) => {
+  const handleUpdateAddress = (addressId: number) => {
+    const address = shippingAddresses.find(
+      (addr) => addr?.addressId === addressId
+    );
+    setAddress(address);
+    setIsAddingAddress(true);
+  };
+
+  const setDefaultShippingAddress = (id: number) => {
     setShippingAddresses(
       shippingAddresses.map((addr) => ({
         ...addr,
-        isDefault: addr.id === id,
+        primaryAddress: addr?.addressId === id,
       }))
     );
   };
 
-  const deleteShippingAddress = (id: string) => {
-    setShippingAddresses(shippingAddresses.filter((addr) => addr.id !== id));
-  };
+  // const deleteShippingAddress = (id: string) => {
+  //   setShippingAddresses(shippingAddresses.filter((addr) => addr.id !== id));
+  // };
 
   return (
     <Card className="overflow-hidden">
@@ -48,18 +89,14 @@ export const ShippingAddress = () => {
             <TruckIcon className="h-5 w-5 text-primary" />
             <span>Shipping Addresses</span>
           </CardTitle>
-          <Button
-            variant="outline"
-            onClick={() => setIsAddingAddress(true)}
-            className="hidden md:flex"
-          >
+          <Button variant="outline" onClick={() => setIsAddingAddress(true)}>
             <PlusIcon className="mr-2 h-4 w-4" />
             Add New Address
           </Button>
         </div>
       </CardHeader>
       <CardContent className="p-6">
-        {isAddingAddress && (
+        {isAddingAddress ? (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
@@ -73,13 +110,15 @@ export const ShippingAddress = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <AddressForm handleSubmit={onShippingSubmit} />
+                <AddressForm
+                  address={address}
+                  addressCategory={ADDRESS_CATEGORY.SHIPPING}
+                  handleCancel={onCancel}
+                />
               </CardContent>
             </Card>
           </motion.div>
-        )}
-
-        {shippingAddresses.length === 0 && !isAddingAddress ? (
+        ) : shippingAddresses.length === 0 && !isAddingAddress ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <TruckIcon className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">No shipping addresses</h3>
@@ -95,7 +134,7 @@ export const ShippingAddress = () => {
           <div className="space-y-4">
             {shippingAddresses.map((address) => (
               <motion.div
-                key={address.id}
+                key={address.addressId}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
@@ -105,34 +144,34 @@ export const ShippingAddress = () => {
                   <div>
                     <h4 className="font-medium">
                       {address.firstName} {address.lastName}
-                      {address.isDefault && (
+                      {address?.primaryAddress && (
                         <Badge variant="secondary" className="ml-2">
                           Default
                         </Badge>
                       )}
                     </h4>
                     <p className="text-sm text-muted-foreground">
-                      {address.addressType === "business"
-                        ? "Business"
-                        : "Residential"}
+                      {address.addressType}
                     </p>
                   </div>
                   <div className="flex gap-2">
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setDefaultShippingAddress(address.id)}
-                      disabled={address.isDefault}
+                      onClick={() =>
+                        setDefaultShippingAddress(address?.addressId)
+                      }
+                      disabled={address.primaryAddress}
                     >
-                      {address.isDefault ? "Default" : "Set Default"}
+                      {address?.primaryAddress ? "Default" : "Set Default"}
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       className="text-destructive hover:text-destructive"
-                      onClick={() => deleteShippingAddress(address.id)}
+                      onClick={() => handleUpdateAddress(address?.addressId)}
                     >
-                      Delete
+                      Edit
                     </Button>
                   </div>
                 </div>
@@ -141,7 +180,7 @@ export const ShippingAddress = () => {
                   {address.addressLine2 && <p>{address.addressLine2}</p>}
                   {address.addressLine3 && <p>{address.addressLine3}</p>}
                   <p>
-                    {address.city}, {address.state} {address.postalCode}
+                    {address.city}, {address.state} {address.zipCode}
                   </p>
                   <p>{address.country}</p>
                 </div>

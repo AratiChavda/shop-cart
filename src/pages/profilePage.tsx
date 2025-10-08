@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,15 +22,54 @@ import { AddressForm } from "./addressForm";
 import { ShippingAddress } from "@/components/profile/shippingAddress";
 import { useParams } from "react-router-dom";
 import { useUser } from "@/hooks/useUser";
+import { ADDRESS_CATEGORY } from "@/constant/common";
+import { toast } from "sonner";
+import { fetchEntityData } from "@/api/apiServices";
 
 function ProfilePage() {
   const [activeTab, setActiveTab] = useState("profile");
+  const [billingAddress, setBillingAddress] = useState(null);
   const params = useParams();
   const { isAdmin, user } = useUser();
 
-  const onBillingSubmit = (values: any) => {
-    console.log("Billing address updated:", values);
+  const fetchBillingAddresse = useCallback(async () => {
+    if (!user?.customer.customerId) return;
+    try {
+      const payload = {
+        class: "CustomerDetails",
+        fields: "customerAddresses",
+        filters: [
+          {
+            path: "customerId",
+            operator: "equals",
+            value: user?.customer.customerId.toString(),
+          },
+          {
+            path: "customerAddresses.address.addressCategory",
+            operator: "in",
+            value: ADDRESS_CATEGORY.BILLING,
+          },
+        ],
+      };
+      const response = await fetchEntityData(payload);
+      if (response.content?.length) {
+        const billingAddress =
+          response.content?.[0]?.customerAddresses[0]?.address;
+        setBillingAddress(billingAddress || null);
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Failed to fetch billing addresses");
+    }
+  }, [user?.customer.customerId]);
+
+  const onBillingSubmit = () => {
+    fetchBillingAddresse();
   };
+
+  useEffect(() => {
+    fetchBillingAddresse();
+  }, [fetchBillingAddresse]);
 
   return isAdmin && !params?.id ? (
     <></>
@@ -182,7 +221,11 @@ function ProfilePage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-6">
-                    <AddressForm handleSubmit={onBillingSubmit} />
+                    <AddressForm
+                      address={billingAddress}
+                      addressCategory={ADDRESS_CATEGORY.BILLING}
+                      handleCancel={onBillingSubmit}
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>

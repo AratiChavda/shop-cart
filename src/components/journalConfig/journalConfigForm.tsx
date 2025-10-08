@@ -213,7 +213,7 @@ const JournalConfigForm = ({
       const payload = {
         class: "OrderCodesSuper",
         fields:
-          "orderCodes.orderCodeId,orderCodes.orderCode,orderCodes.orderType,orderCodes.description,orderCodes.rateCard.rcId,orderCodes.rateCard.rateCard",
+          "id,orderCodes.orderCode,orderCodes.orderType,orderCodes.description,orderCodes.rateCard.rcId,orderCodes.rateCard.rateCard",
         filters: [
           {
             path: "orderClass.ocId",
@@ -224,13 +224,14 @@ const JournalConfigForm = ({
       };
       const response = await fetchEntityData(payload);
       if (response.content?.length) {
-        const allOrderCodes = response.content.flatMap(
-          (item: any) => item.orderCodes || []
-        );
+        const allOrderCodes = response.content.flatMap((item: any) => ({
+          ...item.orderCodes,
+          id: item.id,
+        }));
         setOrderCodes(
           allOrderCodes.map((item: any) => ({
             ...item,
-            orderCodeId: item.orderCodeId?.toString(),
+            orderCodeId: item.id?.toString(),
             rateCard: item.rateCard
               ? {
                   rcId: item.rateCard.rcId?.toString(),
@@ -265,7 +266,7 @@ const JournalConfigForm = ({
           "id,subscriptionDefCode,description,terms.term,terms.termsId,rateCard.rcId,rateCard.rateCard,orderCode.orderCodes.rateCard.rcId,orderCode.orderCodes.rateCard.rateCard",
         filters: [
           {
-            path: "orderCode.orderCodes.orderCodeId",
+            path: "orderCode.id",
             operator: "in",
             value: orderCodeIds,
           },
@@ -346,7 +347,7 @@ const JournalConfigForm = ({
             data?.customerCategory?.CustomerCategoryId?.toString() || "",
           orderCodeIds:
             data?.journalOrderCodes?.map((item: any) =>
-              item?.orderCode?.orderCodes?.orderCodeId?.toString()
+              item?.orderCode?.id?.toString()
             ) || [],
           subDefSelections:
             data?.journalSubDefs?.map((item: any) => ({
@@ -356,7 +357,6 @@ const JournalConfigForm = ({
             })) || [],
         };
         form.reset(formData);
-        console.log(formData);
         setTempSelectedOrderCodeIds(formData.orderCodeIds);
         setTempSelectedSubDefSelections(formData.subDefSelections);
         await trigger();
@@ -652,7 +652,7 @@ const JournalConfigForm = ({
               htmlFor="customerCategoryId"
               className="block font-semibold mb-2"
             >
-              Customer Category
+              Customer Category <span className="text-destructive">*</span>
             </Label>
             <div className="relative">
               <Select
@@ -699,7 +699,7 @@ const JournalConfigForm = ({
             transition={{ delay: 0.2 }}
           >
             <Label htmlFor="ocId" className="block font-semibold mb-2">
-              Order Class
+              Order Class <span className="text-destructive">*</span>
             </Label>
             <SearchableSelect
               value={watch("ocId").toString()}
@@ -793,7 +793,7 @@ const JournalConfigForm = ({
                     className="flex flex-wrap gap-2 p-3 bg-primary/5 rounded-lg border border-primary/20 min-h-[50px]"
                   >
                     {selectedOrderCodeIds.map((id) => {
-                      const code = orderCodes.find((c) => c.orderCodeId === id);
+                      const code = orderCodes.find((c) => c.orderCodeId == id);
                       return (
                         <motion.div
                           key={id}
@@ -900,14 +900,14 @@ const JournalConfigForm = ({
                       <TableBody>
                         {selectedSubDefSelections.map((selection) => {
                           const def = subDefs.find(
-                            (d) => d.id === selection.subDefId
+                            (d) => d.id == selection.subDefId
                           );
                           const term = def?.terms.find(
-                            (t) => t.termsId === selection.termId
+                            (t) => t.termsId == selection.termId
                           );
                           const rateCard = getAvailableRateCards(
                             selection.subDefId
-                          ).find((rc) => rc.rcId === selection.rateCardId);
+                          ).find((rc) => rc.rcId == selection.rateCardId);
                           return (
                             <motion.tr
                               key={selection.subDefId}

@@ -99,7 +99,7 @@ const JournalPage: React.FC<JournalPageProps> = ({ user }) => {
 
       const ocPayload = {
         class: "OcMapping",
-        fields: "oc",
+        fields: "oc,journalCoverImgSrc,orderClass",
         filters: [
           { path: "highwireCode", operator: "equals", value: jCode || "" },
         ],
@@ -108,16 +108,10 @@ const JournalPage: React.FC<JournalPageProps> = ({ user }) => {
       const oc = ocResponse.content?.[0]?.oc;
 
       if (!oc) throw new Error("No journal found");
-
-      const journalPayload = {
-        class: "ParentChildMapping",
-        filters: [
-          { path: "childId.orderClassName", operator: "equals", value: oc },
-        ],
-        fields: "childId.ocId, childId.orderClassName, childId.ocType",
-      };
-      const journalInfo = await fetchEntityData(journalPayload);
-      setJournal(journalInfo.content?.[0] || null);
+      setJournal({
+        ...ocResponse.content?.[0]?.orderClass,
+        journalCoverImgSrc: ocResponse.content?.[0]?.journalCoverImgSrc,
+      });
 
       const configPayload = {
         class: "JournalConfiguration",
@@ -163,7 +157,7 @@ const JournalPage: React.FC<JournalPageProps> = ({ user }) => {
           {
             path: "orderClassId.ocId",
             operator: "equals",
-            value: journal?.childId?.ocId,
+            value: journal?.ocId,
           },
         ],
       };
@@ -347,8 +341,8 @@ const JournalPage: React.FC<JournalPageProps> = ({ user }) => {
               >
                 <div className="relative group">
                   <img
-                    src={data?.[0]?.journalCoverImgSrc}
-                    alt={data?.[0]?.orderClass?.orderClassName}
+                    src={journal?.journalCoverImgSrc}
+                    alt={journal?.orderClassName}
                     className="rounded-lg object-cover aspect-[3/4] w-full shadow-md transition-transform duration-300 group-hover:scale-102"
                   />
                   <div className="absolute inset-0 bg-primary/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -459,9 +453,9 @@ const JournalPage: React.FC<JournalPageProps> = ({ user }) => {
                                   ))}
                                 </SelectContent>
                               </Select>
-                              {isLoading.issue && (
+                              {/* {isLoading.issue && (
                                 <Icons.loader className="animate-spin absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
-                              )}
+                              )} */}
                             </div>
                             <FormMessage />
                           </FormItem>

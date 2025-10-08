@@ -1,8 +1,8 @@
 import { useClient } from "@/hooks/useClient";
 
 const Footer = () => {
-  const { key } = useClient();
-  return key == "UNP" ? (
+  const { clientName } = useClient();
+  return clientName == "UNP" ? (
     <div className="bg-gray-800 text-white py-4">
       <div className="container mx-auto text-center">
         <p>
@@ -17,7 +17,7 @@ const Footer = () => {
         </p>
       </div>
     </div>
-  ) : key == "UCP" ? (
+  ) : clientName == "UCP" ? (
     <div className="bg-gray-800 text-white py-4 px-4">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0">
         <a
@@ -48,11 +48,7 @@ const Footer = () => {
           </p>
         </div>
         <div className="flex justify-center md:justify-end space-x-2">
-          <a
-            href="/policy"
-            className="text-blue-400 underline"
-            target="_blank"
-          >
+          <a href="/policy" className="text-blue-400 underline" target="_blank">
             Policy
           </a>{" "}
           <span className="border-l border-white-400 h-4 mt-1"></span>

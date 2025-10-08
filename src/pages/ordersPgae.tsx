@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useInView } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -38,10 +38,26 @@ interface Order {
   paymentStatus: keyof typeof PAYMENT_STATUS;
   orderStatus: keyof typeof ORDER_STATUS;
   imageUrl: string;
+  currency: string;
 }
 
-const OrderTimeline: React.FC<{ orders: Order[] }> = ({ orders }) => {
+const PAGE_SIZE = 10;
+
+const OrderTimeline: React.FC<{
+  orders: Order[];
+  hasMore: boolean;
+  loadMore: () => void;
+  loadingMore: boolean;
+}> = ({ orders, hasMore, loadMore, loadingMore }) => {
   const [openOrder, setOpenOrder] = useState<string | null>(null);
+  const ref = React.useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { threshold: 0 });
+
+  useEffect(() => {
+    if (inView && hasMore && !loadingMore) {
+      loadMore();
+    }
+  }, [inView, hasMore, loadingMore, loadMore]);
 
   const getStatusActions = (status: Order["orderStatus"]) => {
     const actions = [
@@ -169,7 +185,10 @@ const OrderTimeline: React.FC<{ orders: Order[] }> = ({ orders }) => {
                         <span className="font-medium">{order.quantity}</span>
                         <span>Price:</span>
                         <span className="font-medium">
-                          ${order.price.toFixed(2)}
+                          {new Intl.NumberFormat("en-US", {
+                            style: "currency",
+                            currency: order.currency || "USD",
+                          }).format(order.price)}
                         </span>
                         <span>Payment:</span>
                         <Badge variant={getPaymentVariant(order.paymentStatus)}>
@@ -210,115 +229,146 @@ const OrderTimeline: React.FC<{ orders: Order[] }> = ({ orders }) => {
           </motion.div>
         );
       })}
+      {hasMore && (
+        <div ref={ref} className="w-full h-20 flex justify-center items-center">
+          {loadingMore && <p className="text-primary/60">Loading more orders...</p>}
+        </div>
+      )}
     </div>
   );
 };
 
 const OrdersPage: React.FC = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [activeOrders, setActiveOrders] = useState<Order[]>([]);
+  const [historyOrders, setHistoryOrders] = useState<Order[]>([]);
+  const [activePage, setActivePage] = useState(0);
+  const [historyPage, setHistoryPage] = useState(0);
+  const [activeHasMore, setActiveHasMore] = useState(true);
+  const [historyHasMore, setHistoryHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [activeTab, setActiveTab] = useState("active");
   const { user } = useUser();
-  // const [activeTab, setActiveTab] = useState("active");
 
-  const activeOrders = orders.filter((order) =>
-    [
-      ORDER_STATUS.ORDER_PLACED,
-      ORDER_STATUS.ACTIVE_SHIPPING,
-      ORDER_STATUS.PARTIAL_SHIPMENT,
-      ORDER_STATUS.HOLD_FOR_PAYMENT,
-    ].includes(order.orderStatus)
-  );
-  const orderHistory = orders.filter((order) =>
-    [
-      ORDER_STATUS.SHIPPED_COMPLETE,
-      ORDER_STATUS.CANCEL_CUSTOMER_REQUEST,
-      ORDER_STATUS.NON_VERIFY_CANCEL,
-      ORDER_STATUS.CANCEL_WAIT_AUTHORIZE,
-      ORDER_STATUS.CANCEL_FOR_NON_PAYMENT,
-      ORDER_STATUS.TEMPORARY_SUSPEND,
-      ORDER_STATUS.SUSPEND_FOR_NON_PAYMENT,
-      ORDER_STATUS.SUSPEND_NOT_DELIVERABLE,
-    ].includes(order.orderStatus)
-  );
+  const fetchOrder = useCallback(
+    async (tab: string, page: number) => {
+      if ((tab === "active" && !activeHasMore) || (tab === "history" && !historyHasMore)) {
+        return;
+      }
 
-  const fetchOrder = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const payload = {
-        class: "Order",
-        fields: [
-          "orderId",
-          "orderStatus",
-          "orderType",
-          "createdAt",
-          "orderClass.orderClassName",
-          "keyOrderInformation.orderCode.orderCodes.description",
-          "keyOrderInformation.orderCode.orderCodes.orderType",
-          "orderItemsAndTerms.subsProdPkgDef.description",
-          "orderItemsAndTerms.packageDef.packageKeyInfo.description",
-          "orderItemsAndTerms.generatedIssue.issueDate",
-          "orderItemsAndTerms.validFrom",
-          "orderItemsAndTerms.numOfIssues",
-          "paymentBreakdown.paymentStatus",
-          "paymentBreakdown.netAmount",
-          "paymentBreakdown.currency",
-        ]?.toString(),
-        filters: [
+      const isInitialLoad = page === 0;
+      setIsLoading(isInitialLoad);
+      setIsLoadingMore(!isInitialLoad);
+
+      try {
+        const baseFilters = [
           {
             path: "customerId.customerId",
             operator: "equals",
             value: user?.customer?.customerId?.toString() || "",
           },
-        ],
-      };
-      const response = await fetchEntityData(payload, {
-        page: 0,
-        size: 1000,
-        sort: "createdAt,desc",
-      });
-      setOrders(
-        response.content?.map((order: any) => {
-          return {
-            id: order.orderId,
-            packageName: order?.orderItemsAndTerms?.subsProdPkgDef?.description
-              ? order?.orderItemsAndTerms?.subsProdPkgDef?.description
-              : order?.orderItemsAndTerms?.packageDef?.packageKeyInfo
-                  ?.description
-              ? order?.orderItemsAndTerms?.packageDef?.packageKeyInfo
-                  ?.description
-              : order?.keyOrderInformation?.orderCode?.orderCodes?.description,
-            placedDate: formatDate(order.createdAt),
-            startDate: formatDate(order?.orderItemsAndTerms?.validFrom),
-            issue:
-              order?.keyOrderInformation?.orderCode?.orderCodes?.orderType ===
-                OC_ORDER_TYPE.SINGLE_ISSUE &&
-              order?.orderItemsAndTerms?.generatedIssue?.issueDate
-                ? formatDate(
-                    order?.orderItemsAndTerms?.generatedIssue?.issueDate
-                  )
-                : "",
-            quantity: order?.orderItemsAndTerms?.numOfIssues,
-            orderStatus: order.orderStatus,
-            paymentStatus: order?.paymentBreakdown?.paymentStatus,
-            price: order?.paymentBreakdown?.netAmount,
-            currency: order?.paymentBreakdown?.currency,
-            imageUrl:
-              "https://unebraskajournals-us.imgix.net/journals/0149-9408.jpg",
-          };
-        })
-      );
-      console.log(response);
-    } catch (error: any) {
-      console.error(error);
-      toast.error("Failed to fetch orders");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user?.customer?.customerId]);
+        ];
+
+        const statusFilter =
+          tab === "active"
+            ? {
+                path: "orderStatus",
+                operator: "in",
+                value: [
+                  ORDER_STATUS.ORDER_PLACED,
+                  ORDER_STATUS.ACTIVE_SHIPPING,
+                  ORDER_STATUS.PARTIAL_SHIPMENT,
+                  ORDER_STATUS.HOLD_FOR_PAYMENT,
+                ].join(","),
+              }
+            : {
+                path: "orderStatus",
+                operator: "not-in",
+                value: [
+                  ORDER_STATUS.ORDER_PLACED,
+                  ORDER_STATUS.ACTIVE_SHIPPING,
+                  ORDER_STATUS.PARTIAL_SHIPMENT,
+                  ORDER_STATUS.HOLD_FOR_PAYMENT,
+                ].join(","),
+              };
+
+        const payload = {
+          class: "Order",
+          fields: [
+            "orderId",
+            "orderStatus",
+            "orderType",
+            "createdAt",
+            "orderClass.orderClassName",
+            "keyOrderInformation.orderCode.orderCodes.description",
+            "keyOrderInformation.orderCode.orderCodes.orderType",
+            "orderItemsAndTerms.subsProdPkgDef.description",
+            "orderItemsAndTerms.packageDef.packageKeyInfo.description",
+            "orderItemsAndTerms.generatedIssue.issueDate",
+            "orderItemsAndTerms.validFrom",
+            "orderItemsAndTerms.numOfIssues",
+            "paymentBreakdown.paymentStatus",
+            "paymentBreakdown.netAmount",
+            "paymentBreakdown.currency",
+          ].join(","),
+          filters: [...baseFilters, statusFilter],
+        };
+
+        const response = await fetchEntityData(payload, {
+          page,
+          size: PAGE_SIZE,
+          sort: "createdAt,desc",
+        });
+
+        const newOrders = (response.content || []).map((order: any) => ({
+          id: order.orderId,
+          packageName:
+            order?.orderItemsAndTerms?.subsProdPkgDef?.description ||
+            order?.orderItemsAndTerms?.packageDef?.packageKeyInfo?.description ||
+            order?.keyOrderInformation?.orderCode?.orderCodes?.description ||
+            "Unknown Package",
+          placedDate: formatDate(order.createdAt),
+          startDate: formatDate(order?.orderItemsAndTerms?.validFrom),
+          quantity: order?.orderItemsAndTerms?.numOfIssues || 1,
+          orderStatus: order.orderStatus,
+          paymentStatus: order?.paymentBreakdown?.paymentStatus,
+          price: order?.paymentBreakdown?.netAmount || 0,
+          currency: order?.paymentBreakdown?.currency || "USD",
+          imageUrl:
+            "https://unebraskajournals-us.imgix.net/journals/0149-9408.jpg",
+        }));
+
+        if (tab === "active") {
+          setActiveOrders((prev) =>
+            isInitialLoad ? newOrders : [...prev, ...newOrders]
+          );
+          setActiveHasMore(response.page + 1 < response.totalPages);
+          setActivePage(response.page);
+        } else {
+          setHistoryOrders((prev) =>
+            isInitialLoad ? newOrders : [...prev, ...newOrders]
+          );
+          setHistoryHasMore(response.page + 1 < response.totalPages);
+          setHistoryPage(response.page);
+        }
+      } catch (error: any) {
+        console.error(error);
+        toast.error("Failed to fetch orders");
+      } finally {
+        setIsLoading(false);
+        setIsLoadingMore(false);
+      }
+    },
+    [user?.customer?.customerId, activeHasMore, historyHasMore]
+  );
 
   useEffect(() => {
-    fetchOrder();
-  }, [fetchOrder]);
+    if (activeTab === "active" && activeOrders.length === 0) {
+      fetchOrder("active", 0);
+    } else if (activeTab === "history" && historyOrders.length === 0) {
+      fetchOrder("history", 0);
+    }
+  }, [activeTab, fetchOrder, activeOrders.length, historyOrders.length]);
 
   return (
     <div className="min-h-screen bg-white py-8 px-4 sm:px-6 lg:px-8">
@@ -339,7 +389,7 @@ const OrdersPage: React.FC = () => {
       <Tabs
         defaultValue="active"
         className="max-w-5xl mx-auto"
-        // onValueChange={setActiveTab}
+        onValueChange={setActiveTab}
       >
         <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-8 bg-primary/10 rounded-lg">
           <TabsTrigger
@@ -356,8 +406,15 @@ const OrdersPage: React.FC = () => {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="active">
-          {activeOrders.length > 0 ? (
-            <OrderTimeline orders={activeOrders} />
+          {isLoading ? (
+            <p className="text-center text-primary/60">Loading...</p>
+          ) : activeOrders.length > 0 ? (
+            <OrderTimeline
+              orders={activeOrders}
+              hasMore={activeHasMore}
+              loadMore={() => fetchOrder("active", activePage + 1)}
+              loadingMore={isLoadingMore}
+            />
           ) : (
             <p className="text-center text-primary/60">
               No active orders at the moment.
@@ -365,8 +422,15 @@ const OrdersPage: React.FC = () => {
           )}
         </TabsContent>
         <TabsContent value="history">
-          {orderHistory.length > 0 ? (
-            <OrderTimeline orders={orderHistory} />
+          {isLoading ? (
+            <p className="text-center text-primary/60">Loading...</p>
+          ) : historyOrders.length > 0 ? (
+            <OrderTimeline
+              orders={historyOrders}
+              hasMore={historyHasMore}
+              loadMore={() => fetchOrder("history", historyPage + 1)}
+              loadingMore={isLoadingMore}
+            />
           ) : (
             <p className="text-center text-primary/60">
               No order history available.

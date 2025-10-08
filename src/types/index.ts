@@ -1,6 +1,6 @@
 import { clients } from "@/config/clients";
 
-export type ClientName = "DEV" | "UCP" | "UNP" | "NW";
+export type ClientName = "DEV" | "UCP" | "UNP" | "NW" | "UTP";
 export interface Client {
   clientName: ClientName;
   pubId: string;
@@ -12,6 +12,44 @@ export interface Client {
 }
 
 export type ClientKey = keyof typeof clients;
+
+export interface Address {
+  createdBy: string | null;
+  createdAt: number;
+  modifiedBy: string | null;
+  modifiedAt: number;
+  addressId: number;
+  addressstatus: AddressStatus;
+  addressName: string;
+  changeType: string;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  suffix: string;
+  sameAsCustomer: boolean;
+  addressType: string;
+  addressCategory: string;
+  status: string;
+  primaryAddress: boolean;
+  addressLine1: string;
+  addressLine2: string;
+  addressLine3: string;
+  zipCode: string;
+  city: string;
+  state: string;
+  stateCode: string;
+  country: string;
+  company?: string;
+  countryCode: string;
+  phone?: string;
+  validFrom?: string | null;
+  validTo?: string | null;
+  frequency?: string;
+  selectionFrom?: string | null;
+  selectionTo?: string | null;
+  importKickOutData?: string | null;
+  department?: string;
+}
 
 export interface Customer {
   createdBy: string | null;
@@ -122,5 +160,6 @@ export interface AddressStatus {
   active: boolean;
   status: string;
   id: number;
+  addressstatus: string;
   defaultstatus: boolean;
 }

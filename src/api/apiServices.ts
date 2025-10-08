@@ -78,7 +78,10 @@ export const fetchGeoDataByZipCode = async (payload: {
 }) => {
   try {
     const response = await api.get(
-      `${API_ENDPOINTS.location.geoDataByZipCode}/${payload?.countryCode}/${payload?.postalCode}`
+      `${API_ENDPOINTS.location.geoDataByZipCode}/${payload?.countryCode}/${payload?.postalCode}`,
+      {
+        skipAuth: true,
+      } as CustomInternalAxiosRequestConfig
     );
     if (response?.data) {
       return response?.data;
@@ -223,6 +226,19 @@ export const deleteCartItem = async (cartItemId: any) => {
     const response = await api.delete(
       `${API_ENDPOINTS.cart.delete}/${cartItemId}`
     );
+    if (response.data?.success) {
+      return response?.data;
+    }
+    throw response?.data;
+  } catch (error: any) {
+    console.error(error);
+    throw error;
+  }
+};
+
+export const setAddress = async (payload: any) => {
+  try {
+    const response = await api.post(API_ENDPOINTS.user.address, payload);
     if (response.data?.success) {
       return response?.data;
     }

@@ -243,13 +243,11 @@ const JournalConfigList = ({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-48 mt-2 shadow-xl rounded-xl border border-gray-100 bg-white">
-                          <DropdownMenuItem>
-                            <Icons.order className="h-4 w-4" />
-                            View Order Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Icons.user className="h-4 w-4" />
-                            Customer Profile
+                          <DropdownMenuItem
+                            onClick={() => handleEdit(item.id)}
+                          >
+                            <Icons.pencilLine className="h-4 w-4" />
+                            Edit
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

@@ -23,7 +23,7 @@ export const ADDRESS_CATEGORY = {
   BILLING: "Billing",
   RENEWAL: "Renewal",
   ALTERNATE: "Alternate",
-};
+} as const;
 
 export const CLAIM_STATUS = {
   IN_PROGRESS: "In Progress",

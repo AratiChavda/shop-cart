@@ -37,6 +37,18 @@ export const clients: Record<ClientName, Client> = {
     showPromoCode: false,
     apiURL: "https://think365.mpstechnologies.com/think365setupucp",
   },
+  UTP: {
+    clientName: "UTP",
+    pubId: "",
+    variables: {
+      "--primary": "oklch(0.5882 0.1619 42.87)",
+      "--primary-foreground": "oklch(1 0 0)",
+    },
+    logo: "https://dhjhkxawhe8q4.cloudfront.net/texas-uni-wp/wp-content/uploads/2025/02/18195056/cropped-cropped-UTP75-Logo_Homepage-bigger.png",
+    journalBrowseURL: "https://utpress.utexas.edu/journals",
+    showPromoCode: false,
+    apiURL: "https://think365.mpstechnologies.com/think365setuputp",
+  },
   DEV: {
     clientName: "DEV",
     pubId: "67",

@@ -11,26 +11,26 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { CLAIM_STATUS } from "@/constant/common";
 import { Textarea } from "@/components/ui/textarea";
@@ -120,6 +120,8 @@ const ClaimPage = () => {
 
   const {
     paginatedData,
+    pageSize,
+    setPageSize,
     page,
     setPage,
     pageCount,
@@ -254,7 +256,10 @@ const ClaimPage = () => {
                       </div>
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button variant="link" className="cursor-pointer absolute right-2">
+                          <Button
+                            variant="link"
+                            className="cursor-pointer absolute right-2"
+                          >
                             Update
                           </Button>
                         </DialogTrigger>
@@ -276,8 +281,10 @@ const ClaimPage = () => {
 
       <DataTablePagination
         currentPage={page}
+        pageSize={pageSize}
         pageCount={pageCount}
         onPageChange={setPage}
+        onPageSizeChange={setPageSize}
       />
     </div>
   );

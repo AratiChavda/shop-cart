@@ -63,6 +63,8 @@ const RenewalPage = () => {
 
   const {
     paginatedData: expiredPaginatedData,
+    pageSize: expiredPageSize,
+    setPageSize: setExpiredPageSize,
     page: expiredPage,
     setPage: setExpiredPage,
     pageCount: expiredPageCount,
@@ -77,6 +79,8 @@ const RenewalPage = () => {
 
   const {
     paginatedData: aboutToExpirePaginatedData,
+    pageSize: aboutToExpirePageSize,
+    setPageSize: setAboutToExpirePageSize,
     page: aboutToExpirePage,
     setPage: setAboutToExpirePage,
     pageCount: aboutToExpirePageCount,
@@ -132,6 +136,8 @@ const RenewalPage = () => {
 
   const renderDashboard = (
     paginatedData: any[],
+    pageSize: number,
+    setPageSize: (pageSize: number) => void,
     page: number,
     setPage: (page: number) => void,
     pageCount: number,
@@ -234,8 +240,10 @@ const RenewalPage = () => {
 
       <DataTablePagination
         currentPage={page}
+        pageSize={pageSize}
         pageCount={pageCount}
         onPageChange={setPage}
+        onPageSizeChange={setPageSize}
       />
     </div>
   );
@@ -249,6 +257,8 @@ const RenewalPage = () => {
       <TabsContent value="expired">
         {renderDashboard(
           expiredPaginatedData,
+          expiredPageSize,
+          setExpiredPageSize,
           expiredPage,
           setExpiredPage,
           expiredPageCount,
@@ -262,6 +272,8 @@ const RenewalPage = () => {
       <TabsContent value="aboutToExpire">
         {renderDashboard(
           aboutToExpirePaginatedData,
+          aboutToExpirePageSize,
+          setAboutToExpirePageSize,
           aboutToExpirePage,
           setAboutToExpirePage,
           aboutToExpirePageCount,

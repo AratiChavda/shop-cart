@@ -48,9 +48,12 @@ const registerSchema = z.object({
   phone: z.string().optional(),
   email: z.string().email("Please enter a valid email address"),
   customerCategoryId: z.string().min(1, "Please select an category"),
-  addressType: z.enum(["business", "residential", "other"], {
-    required_error: "Please select an address type",
-  }),
+  addressType: z.enum(
+    [ADDRESS_TYPE.Business, ADDRESS_TYPE.Other, ADDRESS_TYPE.Residential],
+    {
+      required_error: "Please select an address type",
+    }
+  ),
   addressLine1: z.string().min(1, "Address Line 1 required"),
   addressLine2: z.string().optional(),
   addressLine3: z.string().optional(),
@@ -75,6 +78,7 @@ export function Register() {
   const [isLoading, setIsLoading] = useState({
     category: false,
     countries: false,
+    address: false,
   });
   const addressTypes = Object.values(ADDRESS_TYPE);
 
@@ -128,7 +132,7 @@ export function Register() {
   }, []);
 
   const fetchAddressStatus = useCallback(async () => {
-    setIsLoading((prev) => ({ ...prev, category: true }));
+    setIsLoading((prev) => ({ ...prev, address: true }));
     try {
       const payload = {
         class: "AddressStatus",
@@ -147,7 +151,7 @@ export function Register() {
       console.error(error);
       toast.error("Failed to fetch address status");
     } finally {
-      setIsLoading((prev) => ({ ...prev, category: false }));
+      setIsLoading((prev) => ({ ...prev, address: false }));
     }
   }, []);
 

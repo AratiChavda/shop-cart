@@ -8,6 +8,7 @@ const API_ENDPOINTS = {
   },
   user: {
     me: `${API_BASE_URL}/v1/users/me`,
+    address: `${API_BASE_URL}/v1/users/address`,
   },
   customer: {
     fetch: `${API_BASE_URL}/getSearchedCustomersWithTwoActiveRecentOrderCodes?pubId=6&page=0&size=50`,

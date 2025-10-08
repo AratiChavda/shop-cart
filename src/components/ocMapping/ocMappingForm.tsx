@@ -44,6 +44,7 @@ const OcMappingForm = ({ mappingId, handleCancel }: OcMappingFormProps) => {
       ocId: "",
       oc: "",
       highwireCode: "",
+      journalCoverImgSrc: "",
     },
   });
 
@@ -175,7 +176,7 @@ const OcMappingForm = ({ mappingId, handleCancel }: OcMappingFormProps) => {
             transition={{ delay: 0.2 }}
           >
             <Label htmlFor="ocId" className="block font-semibold mb-2">
-              Order Class
+              Order Class <span className="text-destructive">*</span>
             </Label>
             <SearchableSelect
               value={watch("ocId").toString()}
@@ -191,7 +192,7 @@ const OcMappingForm = ({ mappingId, handleCancel }: OcMappingFormProps) => {
               <motion.p
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
-                className="mt-2 text-sm text-red-600"
+                className="mt-2 text-sm text-destructive"
               >
                 {errors.ocId.message}
               </motion.p>
@@ -207,14 +208,17 @@ const OcMappingForm = ({ mappingId, handleCancel }: OcMappingFormProps) => {
               htmlFor="customerCategoryId"
               className="block font-semibold mb-2"
             >
-              Code
+              Code <span className="text-destructive">*</span>
             </Label>
-            <Input placeholder="Code" {...form.register("highwireCode")} />
+            <Input
+              placeholder="enter code"
+              {...form.register("highwireCode")}
+            />
             {errors.highwireCode && (
               <motion.p
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
-                className="mt-2 text-sm text-red-600"
+                className="mt-2 text-sm text-destructive"
               >
                 {errors.highwireCode.message}
               </motion.p>
@@ -227,16 +231,12 @@ const OcMappingForm = ({ mappingId, handleCancel }: OcMappingFormProps) => {
             transition={{ delay: 0.2 }}
           >
             <Label htmlFor="ocId" className="block font-semibold mb-2">
-              Journal cover image URL
+              Journal cover image URL{" "}
+              <span className="text-destructive">*</span>
             </Label>
             <Input
               placeholder="Enter journal cover image URL"
-              value={watch("journalCoverImgSrc") || ""}
-              onChange={(e: any) => {
-                setValue("journalCoverImgSrc", e.target.value, {
-                  shouldValidate: true,
-                });
-              }}
+              {...form.register("journalCoverImgSrc")}
             />
 
             {errors.journalCoverImgSrc && (

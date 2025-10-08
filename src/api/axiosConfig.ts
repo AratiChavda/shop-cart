@@ -7,7 +7,7 @@ export interface CustomInternalAxiosRequestConfig
 }
 
 export const API_BASE_URL =
-  "https://think365.mpstechnologies.com/think365setupucp";
+  "https://think365.mpstechnologies.com/think365setuptest";
 
 const api = axios.create({
   baseURL: API_BASE_URL,

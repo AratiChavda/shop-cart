@@ -11,26 +11,26 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { KeyValuePair } from "@/components/ui/keyValuePair";
@@ -100,6 +100,8 @@ const CancellationPage = () => {
 
   const {
     paginatedData,
+    pageSize,
+    setPageSize,
     page,
     setPage,
     pageCount,
@@ -244,10 +246,22 @@ const CancellationPage = () => {
                   <CardContent className="p-4 sm:p-5">
                     <div className="space-y-1">
                       <KeyValuePair label="Order ID" value={item.orderId} />
-                      <KeyValuePair label="Customer ID" value={item.customerId} />
-                      <KeyValuePair label="Customer Email" value={item.customerEmail} />
-                      <KeyValuePair label="Cancellation Status" value={item.cancellationStatus} />
-                      <KeyValuePair label="Refund Status" value={item.refundStatus} />
+                      <KeyValuePair
+                        label="Customer ID"
+                        value={item.customerId}
+                      />
+                      <KeyValuePair
+                        label="Customer Email"
+                        value={item.customerEmail}
+                      />
+                      <KeyValuePair
+                        label="Cancellation Status"
+                        value={item.cancellationStatus}
+                      />
+                      <KeyValuePair
+                        label="Refund Status"
+                        value={item.refundStatus}
+                      />
                     </div>
                     <div className="mt-4 flex items-center justify-between">
                       <div className="flex items-center text-xs text-gray-500">
@@ -276,7 +290,9 @@ const CancellationPage = () => {
                           </DialogTrigger>
                           <DialogContent>
                             <DialogHeader>
-                              <DialogTitle>Update Cancellation Status</DialogTitle>
+                              <DialogTitle>
+                                Update Cancellation Status
+                              </DialogTitle>
                             </DialogHeader>
                             <StatusUpdateForm type="cancellation" />
                           </DialogContent>
@@ -293,8 +309,10 @@ const CancellationPage = () => {
 
       <DataTablePagination
         currentPage={page}
+        pageSize={pageSize}
         pageCount={pageCount}
         onPageChange={setPage}
+        onPageSizeChange={setPageSize}
       />
     </div>
   );
@@ -326,7 +344,8 @@ const StatusUpdateForm = ({ type }: { type: "refund" | "cancellation" }) => {
           render={({ field }) => (
             <FormItem>
               <FormLabel>
-                {type === "refund" ? "Refund Status" : "Cancellation Status"} <span className="text-destructive"> *</span>
+                {type === "refund" ? "Refund Status" : "Cancellation Status"}{" "}
+                <span className="text-destructive"> *</span>
               </FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
