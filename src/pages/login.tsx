@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -12,8 +12,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Eye, EyeOff } from "lucide-react";
+import { Input, PasswordInput } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -24,11 +23,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useClient } from "@/hooks/useClient";
-import { useAuth } from "@/context/authContext";
+import { useAuth } from "@/hooks/useAuth";
+import { setCartItem, userSignin } from "@/api/apiServices";
+import { toast } from "sonner";
 
 const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  username: z.string().min(1, "Please enter a valid username"),
+  password: z.string().min(4, "Password must be at least 4 characters"),
 });
 
 const resetSchema = z
@@ -47,8 +48,9 @@ type ResetFormValues = z.infer<typeof resetSchema>;
 export function Login() {
   const { login } = useAuth();
   const { logo } = useClient();
+  const location = useLocation();
   const [error, setError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
+  const { payload, action } = location.state || {};
 
   const navigate = useNavigate();
 
@@ -56,7 +58,7 @@ export function Login() {
     resolver: zodResolver(loginSchema),
     mode: "all",
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
     },
   });
@@ -71,15 +73,29 @@ export function Login() {
   });
 
   const onSubmit = async (data: LoginFormValues) => {
-    if (data) {
-      localStorage.setItem(
-        "role",
-        data?.email == "aratichavda31@gmail.com" ? "Admin" : "user"
-      );
-      login();
-      navigate("/dashboard");
-    } else {
-      setError("Invalid email or password");
+    try {
+      const loginPayload = {
+        username: data.username,
+        password: data.password,
+      };
+      const response = await userSignin(loginPayload);
+      login(response?.data);
+      if (payload && action === "addToCart") {
+        setCartItem(payload)
+          .then(() => {
+            navigate("/dashboard/cart");
+          })
+          .catch((error) => {
+            toast.error("Failed to add to cart");
+            console.error("Error adding to cart after login:", error);
+          });
+      } else {
+        navigate("/dashboard");
+      }
+    } catch (error) {
+      console.error("Login failed:", error);
+      setError("Invalid username or password");
+      toast.error("Invalid username or password");
     }
   };
 
@@ -116,12 +132,12 @@ export function Login() {
             {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
             <FormField
               control={form.control}
-              name="email"
+              name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>User Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="you@example.com" {...field} />
+                    <Input placeholder="User Name" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -135,26 +151,7 @@ export function Login() {
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <div className="relative">
-                      <Input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        {...field}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-2 top-1/2 -translate-y-1/2"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
+                    <PasswordInput placeholder="••••••••" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

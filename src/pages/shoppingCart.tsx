@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { ArrowRightIcon, TrashIcon } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { ArrowRightIcon, MinusIcon, PlusIcon, TrashIcon } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -16,10 +16,21 @@ import {
 import { AddressCard } from "@/components/shoppingCart/addressCard";
 import { useClient } from "@/hooks/useClient";
 import { toast } from "sonner";
-const ShoppingCart = () => {
+import {
+  deleteCartItem,
+  fetchEntityData,
+  updateCartItemQuantity,
+} from "@/api/apiServices";
+
+interface ShoppingCartProps {
+  user: any;
+}
+const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
   const { journalBrowseURL } = useClient();
-  const { cartItems, removeFromCart, updateTotalPrice } = useCart();
+  const [cart, setCart] = useState([]);
+  const { cartItems, updateTotalPrice } = useCart();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [couponCode, setCouponCode] = useState("");
   const [promoError, setPromoError] = useState("");
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
@@ -113,17 +124,41 @@ const ShoppingCart = () => {
     country: "USA",
   };
 
+  const fetchCart = useCallback(async () => {
+    try {
+      setLoading(true);
+      const payload = {
+        class: "ShoppingCart",
+        filters: [
+          {
+            path: "user.id",
+            operator: "equals",
+            value: user?.id,
+          },
+        ],
+        fields:
+          "cartItems.itemType, cartItems.itemId, cartItems.itemName, cartItems.quantity, cartItems.unitPrice, cartItems.totalPrice, cartItems.journalConfiguration.journalCoverImgSrc,cartItems.journalConfiguration.orderClass.orderClassName",
+      };
+      const response = await fetchEntityData(payload);
+      if (response.content?.length) {
+        setCart(response.content?.[0]?.cartItems || []);
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Failed to fetch cart");
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
   useEffect(() => {
+    fetchCart();
     const handleScroll = () => {
       setIsSticky(window.scrollY > 100);
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const handleEdit = (jcode: any) => {
-    navigate(`/dashboard/journal?id=${jcode}`);
-  };
+  }, [fetchCart]);
 
   const handleApplyPromoCode = async () => {
     if (!couponCode) {
@@ -187,6 +222,24 @@ const ShoppingCart = () => {
     return ((subtotal - discountAmount) * (1 + tax)).toFixed(2);
   };
 
+  const handleQuantityChange = async (id: number, quantity: number) => {
+    const payload = {
+      cartItemId: id,
+      quantity,
+    };
+    const response = await updateCartItemQuantity(payload);
+    if (response) {
+      fetchCart();
+    }
+  };
+
+  const handleDeleteItem = async (id: number) => {
+    const response = await deleteCartItem(id);
+    if (response) {
+      fetchCart();
+    }
+  };
+
   const displayAddresses = sameAsBilling ? [billingAddress] : addresses;
 
   return (
@@ -196,7 +249,7 @@ const ShoppingCart = () => {
       transition={{ duration: 0.6, ease: "easeOut" }}
       className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 font-sans h-full"
     >
-      {cartItems.length === 0 ? (
+      {cart.length === 0 ? (
         <motion.div
           initial={{ scale: 0.8 }}
           animate={{ scale: 1 }}
@@ -214,9 +267,9 @@ const ShoppingCart = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           <div className="lg:col-span-2 space-y-4">
             <AnimatePresence>
-              {cartItems.map((item) => (
+              {cart.map((item: any) => (
                 <motion.div
-                  key={item.jcode}
+                  key={item.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
@@ -225,41 +278,53 @@ const ShoppingCart = () => {
                 >
                   <div className="flex items-center gap-4 sm:gap-6">
                     <img
-                      src={item.image}
-                      alt={item.name}
+                      src={item?.journalConfiguration?.journalCoverImgSrc}
+                      alt={
+                        item?.journalConfiguration?.orderClass?.orderClassName
+                      }
                       className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-md border border-gray-200"
                     />
                     <div className="space-y-1">
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-800">
-                        {item.name}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        Issue: {item.issue}
+                      <p className="text-md font-semibold text-gray-800 max-w-sm">
+                        {item?.itemName}
                       </p>
-                      <p className="text-sm text-gray-500 max-w-sm">
-                        {item.description}
+                      <p className="text-sm font-medium text-gray-600">
+                        Price: ${item?.totalPrice?.toFixed(2)}
                       </p>
-                      <p className="text-sm font-medium text-gray-700">
-                        Price: ${item.price.toFixed(2)}
-                      </p>
-                      <p className="text-sm font-medium text-gray-700">
-                        Quantity: {item.quantity}
+                      <p className="text-sm font-medium text-gray-600">
+                        Quantity: {item?.quantity}
                       </p>
                     </div>
                   </div>
-                  <div className="flex space-x-2">
+                  <div className="flex items-center space-x-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleEdit(item.jcode)}
-                      className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                      onClick={() =>
+                        handleQuantityChange(item.id, item.quantity - 1)
+                      }
+                      disabled={item.quantity <= 1}
+                      className="border-gray-300 text-gray-700 hover:bg-gray-100"
                     >
-                      Edit
+                      <MinusIcon className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm font-medium text-gray-700 w-8 text-center">
+                      {item.quantity}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        handleQuantityChange(item.id, item.quantity + 1)
+                      }
+                      className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                    >
+                      <PlusIcon className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => removeFromCart(item.jcode)}
+                      onClick={() => handleDeleteItem(item.id)}
                     >
                       <TrashIcon className="h-4 w-4" />
                     </Button>

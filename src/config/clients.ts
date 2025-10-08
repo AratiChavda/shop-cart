@@ -1,18 +1,21 @@
-export const clients = {
+import type { Client, ClientKey, ClientName } from "@/types";
+
+export const clients: Record<ClientName, Client> = {
   UNP: {
-    key: "UNP",
+    clientName: "UNP",
+    pubId: "",
     variables: {
       "--primary": "oklch(0.4855 0.199154 29.1141)",
       "--primary-foreground": "oklch(1 0 0)",
     },
-    apiBaseUrl: "https://api.unp.example.com",
     logo: "https://unp-think.highwire.org/images/UNP_logo_color_home.png",
     journalBrowseURL: "https://nebraskapressjournals.unl.edu/",
     showPromoCode: false,
     apiURL: "https://think365.mpstechnologies.com/think365setupunp",
   },
   NW: {
-    key: "NW",
+    clientName: "NW",
+    pubId: "",
     variables: {
       "--primary": "oklch(0.4216 0.1536 15.6869)",
       "--primary-foreground": "oklch(1 0 0)",
@@ -23,7 +26,8 @@ export const clients = {
     apiURL: "https://think365.mpstechnologies.com/think365setupnw",
   },
   UCP: {
-    key: "UCP",
+    clientName: "UCP",
+    pubId: "",
     variables: {
       "--primary": "oklch(0.5882 0.1619 42.87)",
       "--primary-foreground": "oklch(1 0 0)",
@@ -33,8 +37,9 @@ export const clients = {
     showPromoCode: false,
     apiURL: "https://think365.mpstechnologies.com/think365setupucp",
   },
-  THINK365: {
-    key: "THINK365",
+  DEV: {
+    clientName: "DEV",
+    pubId: "67",
     variables: {
       "--primary": "oklch(0.4216 0.1536 15.6869)",
       "--primary-foreground": "oklch(1 0 0)",
@@ -46,16 +51,14 @@ export const clients = {
   },
 };
 
-export type ClientKey = keyof typeof clients;
-
 export const getClientKey = (): ClientKey => {
   if (import.meta.env.DEV) {
-    return (import.meta.env.VITE_THINK365_CLIENT as ClientKey) || "UCP";
+    return (import.meta.env.VITE_THINK365_CLIENT as ClientKey) || "DEV";
   }
   const host = window.location.hostname;
   const subdomain = host.split(".")[0].toUpperCase() as ClientKey;
 
-  return subdomain in clients ? subdomain : "UCP";
+  return subdomain in clients ? subdomain : "DEV";
 };
 
 export const currentClient = clients[getClientKey()];

@@ -1,15 +1,9 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  type ReactNode,
-} from "react";
+import { createContext, useState, useEffect, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
-interface AuthContextType {
+export interface AuthContextType {
   isAuthenticated: boolean;
-  login: () => void;
+  login: (data: Record<string, string>) => void;
   logout: () => void;
   bootstrapped: boolean;
 }
@@ -29,13 +23,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setBootstrapped(true);
   }, []);
 
-  const login = () => {
-    localStorage.setItem("access_token", "access_token");
+  const login = (data: Record<string, string>) => {
+    localStorage.setItem("access_token", data?.jwtToken);
+    localStorage.setItem("user_id", data?.username);
     setIsAuthenticated(true);
   };
 
   const logout = () => {
     localStorage.removeItem("access_token");
+    localStorage.removeItem("user_id");
+    localStorage.removeItem("role");
     setIsAuthenticated(false);
     navigate("/");
   };
@@ -49,10 +46,4 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
+export { AuthContext };

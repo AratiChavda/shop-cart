@@ -1,4 +1,4 @@
-import { addressBadgeColors } from "@/utils/common";
+import { addressBadgeColors } from "@/constant/common";
 import { Mail, Phone } from "lucide-react";
 
 export const AddressCard = ({

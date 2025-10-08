@@ -6,24 +6,57 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface DataTablePaginationProps {
   currentPage: number;
   pageCount: number;
+  pageSize: number;
+  pageSizeOptions?: number[];
   onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
 }
 
 export const DataTablePagination = ({
   currentPage,
   pageCount,
+  pageSize,
+  pageSizeOptions = [10, 20, 30, 50],
   onPageChange,
+  onPageSizeChange,
 }: DataTablePaginationProps) => {
   const pages = Array.from({ length: pageCount }, (_, i) => i);
 
   return (
     <div className="flex items-center justify-between p-4 w-full">
-      <div className="text-sm text-muted-foreground w-full">
-        Page <strong>{currentPage + 1}</strong> of {pageCount}
+      <div className="flex items-center gap-4">
+        <div className="text-sm text-nowrap text-muted-foreground w-full">
+          Page <strong>{currentPage + 1}</strong> of {pageCount}
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span className="text-nowrap">Rows per page:</span>
+          <Select
+            value={pageSize.toString()}
+            onValueChange={(value) => onPageSizeChange(Number(value))}
+          >
+            <SelectTrigger className="w-[70px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {pageSizeOptions.map((size) => (
+                <SelectItem key={size.toString()} value={size.toString()}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <Pagination>
         <PaginationContent>

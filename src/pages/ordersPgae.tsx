@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useCallback, useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -18,6 +18,15 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+import { fetchEntityData } from "@/api/apiServices";
+import { useUser } from "@/hooks/useUser";
+import { toast } from "sonner";
+import { OC_ORDER_TYPE, ORDER_STATUS, PAYMENT_STATUS } from "@/constant/common";
+import {
+  formatDate,
+  getPaymentVariant,
+  getStatusVariant,
+} from "@/utils/common";
 
 interface Order {
   id: string;
@@ -26,116 +35,64 @@ interface Order {
   startDate: string;
   quantity: number;
   price: number;
-  paymentStatus: "Paid" | "Pending" | "Failed";
-  orderStatus:
-    | "Complete"
-    | "Processing"
-    | "Shipped"
-    | "Delivered"
-    | "Cancelled";
+  paymentStatus: keyof typeof PAYMENT_STATUS;
+  orderStatus: keyof typeof ORDER_STATUS;
   imageUrl: string;
 }
 
-const orders: Order[] = [
-  {
-    id: "1389572",
-    packageName: "THINK365 Complete Online Only - Package 2024",
-    placedDate: "21 Feb 2024",
-    startDate: "21 Feb 2024",
-    quantity: 1,
-    price: 8616.88,
-    paymentStatus: "Paid",
-    orderStatus: "Complete",
-    imageUrl: "https://unebraskajournals-us.imgix.net/journals/0149-9408.jpg",
-  },
-  {
-    id: "1389573",
-    packageName: "THINK365 Advanced Package 2024",
-    placedDate: "15 Mar 2024",
-    startDate: "15 Mar 2024",
-    quantity: 2,
-    price: 12500.5,
-    paymentStatus: "Pending",
-    orderStatus: "Processing",
-    imageUrl: "https://unebraskajournals-us.imgix.net/journals/0149-9408.jpg",
-  },
-  {
-    id: "1389574",
-    packageName: "THINK365 Premium Subscription",
-    placedDate: "10 Apr 2024",
-    startDate: "12 Apr 2024",
-    quantity: 1,
-    price: 4500.0,
-    paymentStatus: "Paid",
-    orderStatus: "Shipped",
-    imageUrl: "https://unebraskajournals-us.imgix.net/journals/0149-9408.jpg",
-  },
-  {
-    id: "1389575",
-    packageName: "THINK365 Starter Kit 2024",
-    placedDate: "05 May 2024",
-    startDate: "06 May 2024",
-    quantity: 3,
-    price: 2300.75,
-    paymentStatus: "Failed",
-    orderStatus: "Cancelled",
-    imageUrl: "https://unebraskajournals-us.imgix.net/journals/0149-9408.jpg",
-  },
-  {
-    id: "1389576",
-    packageName: "THINK365 Professional Bundle",
-    placedDate: "20 Jun 2024",
-    startDate: "22 Jun 2024",
-    quantity: 1,
-    price: 9900.0,
-    paymentStatus: "Paid",
-    orderStatus: "Delivered",
-    imageUrl: "https://unebraskajournals-us.imgix.net/journals/0149-9408.jpg",
-  },
-];
-
-const OrderTimeline: React.FC<{ orders: Order[]; isActive: boolean }> = ({
-  orders,
-  isActive,
-}) => {
+const OrderTimeline: React.FC<{ orders: Order[] }> = ({ orders }) => {
   const [openOrder, setOpenOrder] = useState<string | null>(null);
 
   const getStatusActions = (status: Order["orderStatus"]) => {
-    switch (status) {
-      case "Processing":
-        return [
-          { label: "Track Order", icon: <Truck className="h-4 w-4" /> },
-          { label: "Cancel Order", icon: <FileText className="h-4 w-4" /> },
-        ];
-      case "Shipped":
-        return [
-          { label: "Track Shipment", icon: <Truck className="h-4 w-4" /> },
-          // { label: "File Claim", icon: <FileText className="h-4 w-4" /> },
-        ];
-      case "Delivered":
-        return [
-          // { label: "View Receipt", icon: <FileText className="h-4 w-4" /> },
-          { label: "Return Item", icon: <Package className="h-4 w-4" /> },
-        ];
-      case "Complete":
-        return [
-          {
-            label: "Download Certificate",
-            icon: <CheckCircle className="h-4 w-4" />,
-          },
-        ];
-      case "Cancelled":
-        return [
-          { label: "View Details", icon: <FileText className="h-4 w-4" /> },
-        ];
-      default:
-        return [];
-    }
+    const actions = [
+      {
+        label: "Track Order",
+        icon: <Truck className="h-4 w-4" />,
+        statuses: [ORDER_STATUS.ORDER_PLACED],
+      },
+      {
+        label: "Cancel Order",
+        icon: <FileText className="h-4 w-4" />,
+        statuses: [ORDER_STATUS.ORDER_PLACED],
+      },
+      {
+        label: "Track Shipment",
+        icon: <Truck className="h-4 w-4" />,
+        statuses: [ORDER_STATUS.ACTIVE_SHIPPING, ORDER_STATUS.PARTIAL_SHIPMENT],
+      },
+      {
+        label: "Return Item",
+        icon: <Package className="h-4 w-4" />,
+        statuses: [ORDER_STATUS.SHIPPED_COMPLETE],
+      },
+      {
+        label: "Download Certificate",
+        icon: <CheckCircle className="h-4 w-4" />,
+        statuses: [ORDER_STATUS.SHIPPED_COMPLETE],
+      },
+      {
+        label: "View Details",
+        icon: <FileText className="h-4 w-4" />,
+        statuses: [
+          ORDER_STATUS.CANCEL_FOR_NON_PAYMENT,
+          ORDER_STATUS.CANCEL_CUSTOMER_REQUEST,
+          ORDER_STATUS.NON_VERIFY_CANCEL,
+          ORDER_STATUS.CANCEL_WAIT_AUTHORIZE,
+        ],
+      },
+    ];
+
+    return actions.filter((action) => action.statuses.includes(status));
   };
-  console.log(isActive);
+
   return (
     <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-1.5 bg-gradient-to-b from-primary to-primary/20"></div>
+      <motion.div
+        initial={{ height: 0 }}
+        animate={{ height: "100%" }}
+        transition={{ duration: 1.5, ease: "easeInOut" }}
+        className="absolute left-1/2 transform -translate-x-1/2 h-full w-1.5 bg-gradient-to-b from-primary to-primary/20"
+      />
       {orders.map((order, index) => {
         const isLeft = index % 2 === 0;
         const actions = getStatusActions(order.orderStatus);
@@ -147,45 +104,30 @@ const OrderTimeline: React.FC<{ orders: Order[]; isActive: boolean }> = ({
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: index * 0.15, ease: "easeOut" }}
-            className={`mb-12 flex flex-col sm:flex-row justify-between items-center w-full ${
+            className={`mb-8 flex flex-col sm:flex-row justify-between items-center w-full ${
               isLeft ? "sm:flex-row" : "sm:flex-row-reverse"
             }`}
           >
             <div
               className={`w-full sm:w-5/12 ${isLeft ? "sm:pr-8" : "sm:pl-8"}`}
             >
-              <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 bg-white border border-primary/10 overflow-hidden">
-                <CardHeader className="relative bg-gradient-to-r from-primary/10 to-transparent">
+              <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 bg-white border border-primary/10">
+                <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent">
                   <CardTitle className="text-lg font-semibold text-primary flex justify-between items-center">
                     {order.packageName}
                     <Badge
-                      variant={
-                        order.orderStatus === "Complete" ||
-                        order.orderStatus === "Delivered" ||
-                        order.orderStatus === "Shipped"
-                          ? "success"
-                          : order.orderStatus === "Cancelled"
-                          ? "destructive"
-                          : order.orderStatus === "Processing"
-                          ? "warning"
-                          : "secondary"
-                      }
+                      variant={getStatusVariant(order.orderStatus)}
                       className="text-xs"
                     >
                       {order.orderStatus}
                     </Badge>
                   </CardTitle>
-                  <motion.div
-                    className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-12 -mt-12"
-                    animate={{ scale: [1, 1.1, 1], rotate: [0, 10, 0] }}
-                    transition={{ repeat: Infinity, duration: 5 }}
-                  />
                 </CardHeader>
                 <CardContent className="p-4">
                   <div className="flex items-center mb-4">
                     <motion.img
                       src={order.imageUrl}
-                      alt="Order"
+                      alt={order.packageName}
                       className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg mr-4 border border-primary/20"
                       whileHover={{ scale: 1.05 }}
                       transition={{ duration: 0.2 }}
@@ -230,39 +172,31 @@ const OrderTimeline: React.FC<{ orders: Order[]; isActive: boolean }> = ({
                           ${order.price.toFixed(2)}
                         </span>
                         <span>Payment:</span>
-                        <span className="font-medium">
-                          <Badge
-                            variant={
-                              order.paymentStatus === "Paid"
-                                ? "success"
-                                : order.paymentStatus === "Pending"
-                                ? "warning"
-                                : "destructive"
-                            }
-                          >
-                            {order.paymentStatus}
-                          </Badge>
-                        </span>
+                        <Badge variant={getPaymentVariant(order.paymentStatus)}>
+                          {order.paymentStatus}
+                        </Badge>
                       </div>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {actions.map((action, idx) => (
-                          <Button
-                            key={idx}
-                            variant="outline"
-                            size="sm"
-                            className="text-primary hover:bg-primary/20 border-primary/30"
-                          >
-                            {action.icon}
-                            <span className="ml-2">{action.label}</span>
-                          </Button>
-                        ))}
-                      </div>
+                      {actions.length > 0 && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {actions.map((action, idx) => (
+                            <Button
+                              key={idx}
+                              variant="outline"
+                              size="sm"
+                              className="text-primary hover:bg-primary/20 border-primary/30"
+                            >
+                              {action.icon}
+                              <span className="ml-2">{action.label}</span>
+                            </Button>
+                          ))}
+                        </div>
+                      )}
                     </CollapsibleContent>
                   </Collapsible>
                 </CardContent>
               </Card>
             </div>
-            <div className="w-full sm:w-2/12 flex justify-center relative z-10">
+            <div className="w-full my-6 sm:my-0 sm:w-2/12 flex justify-center relative z-10">
               <motion.div
                 className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white shadow-lg"
                 whileHover={{ scale: 1.3, rotate: 360 }}
@@ -272,7 +206,7 @@ const OrderTimeline: React.FC<{ orders: Order[]; isActive: boolean }> = ({
                 <Package className="h-5 w-5" />
               </motion.div>
             </div>
-            <div className="hidden sm:block sm:w-5/12"></div>
+            <div className="hidden sm:block sm:w-5/12" />
           </motion.div>
         );
       })}
@@ -281,14 +215,110 @@ const OrderTimeline: React.FC<{ orders: Order[]; isActive: boolean }> = ({
 };
 
 const OrdersPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState("active");
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useUser();
+  // const [activeTab, setActiveTab] = useState("active");
 
   const activeOrders = orders.filter((order) =>
-    ["Processing", "Shipped"].includes(order.orderStatus)
+    [
+      ORDER_STATUS.ORDER_PLACED,
+      ORDER_STATUS.ACTIVE_SHIPPING,
+      ORDER_STATUS.PARTIAL_SHIPMENT,
+      ORDER_STATUS.HOLD_FOR_PAYMENT,
+    ].includes(order.orderStatus)
   );
   const orderHistory = orders.filter((order) =>
-    ["Complete", "Delivered", "Cancelled"].includes(order.orderStatus)
+    [
+      ORDER_STATUS.SHIPPED_COMPLETE,
+      ORDER_STATUS.CANCEL_CUSTOMER_REQUEST,
+      ORDER_STATUS.NON_VERIFY_CANCEL,
+      ORDER_STATUS.CANCEL_WAIT_AUTHORIZE,
+      ORDER_STATUS.CANCEL_FOR_NON_PAYMENT,
+      ORDER_STATUS.TEMPORARY_SUSPEND,
+      ORDER_STATUS.SUSPEND_FOR_NON_PAYMENT,
+      ORDER_STATUS.SUSPEND_NOT_DELIVERABLE,
+    ].includes(order.orderStatus)
   );
+
+  const fetchOrder = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const payload = {
+        class: "Order",
+        fields: [
+          "orderId",
+          "orderStatus",
+          "orderType",
+          "createdAt",
+          "orderClass.orderClassName",
+          "keyOrderInformation.orderCode.orderCodes.description",
+          "keyOrderInformation.orderCode.orderCodes.orderType",
+          "orderItemsAndTerms.subsProdPkgDef.description",
+          "orderItemsAndTerms.packageDef.packageKeyInfo.description",
+          "orderItemsAndTerms.generatedIssue.issueDate",
+          "orderItemsAndTerms.validFrom",
+          "orderItemsAndTerms.numOfIssues",
+          "paymentBreakdown.paymentStatus",
+          "paymentBreakdown.netAmount",
+          "paymentBreakdown.currency",
+        ]?.toString(),
+        filters: [
+          {
+            path: "customerId.customerId",
+            operator: "equals",
+            value: user?.customer?.customerId?.toString() || "",
+          },
+        ],
+      };
+      const response = await fetchEntityData(payload, {
+        page: 0,
+        size: 1000,
+        sort: "createdAt,desc",
+      });
+      setOrders(
+        response.content?.map((order: any) => {
+          return {
+            id: order.orderId,
+            packageName: order?.orderItemsAndTerms?.subsProdPkgDef?.description
+              ? order?.orderItemsAndTerms?.subsProdPkgDef?.description
+              : order?.orderItemsAndTerms?.packageDef?.packageKeyInfo
+                  ?.description
+              ? order?.orderItemsAndTerms?.packageDef?.packageKeyInfo
+                  ?.description
+              : order?.keyOrderInformation?.orderCode?.orderCodes?.description,
+            placedDate: formatDate(order.createdAt),
+            startDate: formatDate(order?.orderItemsAndTerms?.validFrom),
+            issue:
+              order?.keyOrderInformation?.orderCode?.orderCodes?.orderType ===
+                OC_ORDER_TYPE.SINGLE_ISSUE &&
+              order?.orderItemsAndTerms?.generatedIssue?.issueDate
+                ? formatDate(
+                    order?.orderItemsAndTerms?.generatedIssue?.issueDate
+                  )
+                : "",
+            quantity: order?.orderItemsAndTerms?.numOfIssues,
+            orderStatus: order.orderStatus,
+            paymentStatus: order?.paymentBreakdown?.paymentStatus,
+            price: order?.paymentBreakdown?.netAmount,
+            currency: order?.paymentBreakdown?.currency,
+            imageUrl:
+              "https://unebraskajournals-us.imgix.net/journals/0149-9408.jpg",
+          };
+        })
+      );
+      console.log(response);
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Failed to fetch orders");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user?.customer?.customerId]);
+
+  useEffect(() => {
+    fetchOrder();
+  }, [fetchOrder]);
 
   return (
     <div className="min-h-screen bg-white py-8 px-4 sm:px-6 lg:px-8">
@@ -309,7 +339,7 @@ const OrdersPage: React.FC = () => {
       <Tabs
         defaultValue="active"
         className="max-w-5xl mx-auto"
-        onValueChange={setActiveTab}
+        // onValueChange={setActiveTab}
       >
         <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-8 bg-primary/10 rounded-lg">
           <TabsTrigger
@@ -325,34 +355,24 @@ const OrdersPage: React.FC = () => {
             Order History
           </TabsTrigger>
         </TabsList>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, x: activeTab === "active" ? 30 : -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: activeTab === "active" ? -30 : 30 }}
-            transition={{ duration: 0.4, ease: "easeInOut" }}
-          >
-            <TabsContent value="active">
-              {activeOrders.length > 0 ? (
-                <OrderTimeline orders={activeOrders} isActive={true} />
-              ) : (
-                <p className="text-center text-primary/60">
-                  No active orders at the moment.
-                </p>
-              )}
-            </TabsContent>
-            <TabsContent value="history">
-              {orderHistory.length > 0 ? (
-                <OrderTimeline orders={orderHistory} isActive={false} />
-              ) : (
-                <p className="text-center text-primary/60">
-                  No order history available.
-                </p>
-              )}
-            </TabsContent>
-          </motion.div>
-        </AnimatePresence>
+        <TabsContent value="active">
+          {activeOrders.length > 0 ? (
+            <OrderTimeline orders={activeOrders} />
+          ) : (
+            <p className="text-center text-primary/60">
+              No active orders at the moment.
+            </p>
+          )}
+        </TabsContent>
+        <TabsContent value="history">
+          {orderHistory.length > 0 ? (
+            <OrderTimeline orders={orderHistory} />
+          ) : (
+            <p className="text-center text-primary/60">
+              No order history available.
+            </p>
+          )}
+        </TabsContent>
       </Tabs>
     </div>
   );

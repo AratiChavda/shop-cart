@@ -21,11 +21,12 @@ import { PasswordForm } from "@/components/profile/passwordForm";
 import { AddressForm } from "./addressForm";
 import { ShippingAddress } from "@/components/profile/shippingAddress";
 import { useParams } from "react-router-dom";
+import { useUser } from "@/hooks/useUser";
 
 function ProfilePage() {
   const [activeTab, setActiveTab] = useState("profile");
   const params = useParams();
-  const isAdmin = params?.id === "1";
+  const { isAdmin, user } = useUser();
 
   const onBillingSubmit = (values: any) => {
     console.log("Billing address updated:", values);
@@ -43,13 +44,19 @@ function ProfilePage() {
                 <Avatar className="h-24 w-24 border-4 border-white shadow-lg ring-2 ring-primary/30">
                   <AvatarImage src="/profile-placeholder.jpg" />
                   <AvatarFallback className="bg-primary text-white text-2xl font-bold">
-                    JD
+                    {user?.username
+                      ?.split(" ")
+                      .map((word: string) => word[0].toUpperCase())
+                      .slice(0, 2)
+                      .join("")}
                   </AvatarFallback>
                 </Avatar>
               </div>
             </div>
             <CardContent className="pt-16 pb-6 text-center">
-              <h2 className="text-xl font-bold text-gray-800">John Doe</h2>
+              <h2 className="text-xl font-bold text-gray-800">
+                {user?.customer?.fname} {user?.customer?.lname}
+              </h2>
               <p className="text-sm text-gray-500">Premium Member</p>
               <Badge
                 variant="outline"
@@ -94,8 +101,8 @@ function ProfilePage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {[
-                    { icon: Mail, text: "john@example.com" },
-                    { icon: Phone, text: "+1 (555) 123-4567" },
+                    { icon: Mail, text: user?.customer?.email },
+                    { icon: Phone, text: user?.customer?.mobileNumber },
                     { icon: Globe, text: "San Francisco, CA" },
                   ].map((item, index) => (
                     <div key={index} className="flex items-center">

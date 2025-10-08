@@ -9,27 +9,31 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Menu, X, User, LogOut } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useClient } from "@/hooks/useClient";
-import { useAuth } from "@/context/authContext";
+import { useAuth } from "@/hooks/useAuth";
+import { Icons } from "@/components/icons";
+import { useUser } from "@/hooks/useUser";
+import { fetchEntityData } from "@/api/apiServices";
 
-export const Header = ({ cartItems = [], userName = "Guest" }) => {
-  const isAdmin = localStorage.getItem("role") == "Admin";
+export const Header = () => {
   const { logo } = useClient();
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [navMenu, setNavMenu] = useState<{ title: string; url: string }[]>([]);
+  const { user, isAdmin } = useUser();
+  const [cartQuantity, setCartQuantity] = useState<number>(0);
 
   useEffect(() => {
     if (isAdmin) {
       setNavMenu([
         { title: "Dashboard", url: "/dashboard" },
-        { title: "Orders", url: "/dashboard/orders" },
+        { title: "Journal Config", url: "/dashboard/journal-config" },
+        { title: "Order class mapping", url: "/dashboard/oc-mapping" },
       ]);
     } else {
       setNavMenu([
@@ -38,6 +42,32 @@ export const Header = ({ cartItems = [], userName = "Guest" }) => {
       ]);
     }
   }, [isAdmin]);
+
+  useEffect(() => {
+    const fetchCart = async () => {
+      if (!user?.id) return;
+      try {
+        const payload = {
+          class: "ShoppingCart",
+          filters: [
+            {
+              path: "user.id",
+              operator: "equals",
+              value: user?.id?.toString(),
+            },
+          ],
+          fields: "cartItems.id",
+        };
+        const response = await fetchEntityData(payload);
+        if (response.content?.length) {
+          setCartQuantity(response.content?.[0]?.cartItems?.length || []);
+        }
+      } catch (error: any) {
+        console.error(error);
+      }
+    };
+    fetchCart();
+  }, [user]);
 
   const menuVariants = {
     closed: { y: "-100%", opacity: 0 },
@@ -71,9 +101,9 @@ export const Header = ({ cartItems = [], userName = "Guest" }) => {
             className="md:hidden"
           >
             {menuOpen ? (
-              <X className="w-5 h-5 text-gray-900" />
+              <Icons.x className="w-5 h-5 text-gray-900" />
             ) : (
-              <Menu className="w-5 h-5 text-gray-900" />
+              <Icons.menu className="w-5 h-5 text-gray-900" />
             )}
           </Button>
 
@@ -133,17 +163,17 @@ export const Header = ({ cartItems = [], userName = "Guest" }) => {
           </ul>
         </nav>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           {!isAdmin && (
             <Button
               variant="ghost"
               onClick={() => navigate("/dashboard/cart")}
               className="relative"
             >
-              <ShoppingCart className="h-6 w-6" />
-              {cartItems.length > 0 && (
-                <Badge className="absolute -top-2 -right-2 bg-blue-500 text-white">
-                  {cartItems.length}
+              <Icons.cart className="h-6 w-6" />
+              {cartQuantity > 0 && (
+                <Badge className="absolute rounded-full -top-2 -right-2 bg-primary/90 text-white">
+                  {cartQuantity}
                 </Badge>
               )}
             </Button>
@@ -157,7 +187,7 @@ export const Header = ({ cartItems = [], userName = "Guest" }) => {
               >
                 <Avatar className="size-8 cursor-pointer border-2 border-primary-100 hover:border-primary-200 transition-colors">
                   <AvatarFallback className="bg-primary-100 text-primary-600 font-medium">
-                    {(isAdmin ? "Admin" : userName)
+                    {user?.username
                       ?.split(" ")
                       .map((word: string) => word[0].toUpperCase())
                       .slice(0, 2)
@@ -168,7 +198,7 @@ export const Header = ({ cartItems = [], userName = "Guest" }) => {
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56 mt-2 shadow-xl rounded-xl border border-gray-100">
               <DropdownMenuLabel className="gap-2 cursor-pointer">
-                <span className="ml-2">{isAdmin ? "Admin" : userName}</span>
+                <span className="ml-2">{user?.username}</span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-gray-100" />
               {!isAdmin && (
@@ -176,7 +206,7 @@ export const Header = ({ cartItems = [], userName = "Guest" }) => {
                   onClick={() => navigate("/dashboard/profile")}
                   className="gap-2 cursor-pointer"
                 >
-                  <User className="h-4 w-4 text-gray-500" />
+                  <Icons.user className="h-4 w-4 text-gray-500" />
                   <span>View Profile</span>
                 </DropdownMenuItem>
               )}
@@ -184,7 +214,7 @@ export const Header = ({ cartItems = [], userName = "Guest" }) => {
                 onClick={handleLogout}
                 className="gap-2 cursor-pointer text-red-500 hover:!text-red-600 focus:!text-red-600"
               >
-                <LogOut className="h-4 w-4" />
+                <Icons.logout className="h-4 w-4" />
                 <span>Logout</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
