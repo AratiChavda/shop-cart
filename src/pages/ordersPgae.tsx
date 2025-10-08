@@ -21,7 +21,7 @@ import {
 import { fetchEntityData } from "@/api/apiServices";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
-import { OC_ORDER_TYPE, ORDER_STATUS, PAYMENT_STATUS } from "@/constant/common";
+import { ORDER_STATUS, PAYMENT_STATUS } from "@/constant/common";
 import {
   formatDate,
   getPaymentVariant,
@@ -51,7 +51,7 @@ const OrderTimeline: React.FC<{
 }> = ({ orders, hasMore, loadMore, loadingMore }) => {
   const [openOrder, setOpenOrder] = useState<string | null>(null);
   const ref = React.useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { threshold: 0 });
+  const inView = useInView(ref, { amount: 0 });
 
   useEffect(() => {
     if (inView && hasMore && !loadingMore) {
@@ -231,7 +231,9 @@ const OrderTimeline: React.FC<{
       })}
       {hasMore && (
         <div ref={ref} className="w-full h-20 flex justify-center items-center">
-          {loadingMore && <p className="text-primary/60">Loading more orders...</p>}
+          {loadingMore && (
+            <p className="text-primary/60">Loading more orders...</p>
+          )}
         </div>
       )}
     </div>
@@ -252,7 +254,10 @@ const OrdersPage: React.FC = () => {
 
   const fetchOrder = useCallback(
     async (tab: string, page: number) => {
-      if ((tab === "active" && !activeHasMore) || (tab === "history" && !historyHasMore)) {
+      if (
+        (tab === "active" && !activeHasMore) ||
+        (tab === "history" && !historyHasMore)
+      ) {
         return;
       }
 
@@ -324,7 +329,8 @@ const OrdersPage: React.FC = () => {
           id: order.orderId,
           packageName:
             order?.orderItemsAndTerms?.subsProdPkgDef?.description ||
-            order?.orderItemsAndTerms?.packageDef?.packageKeyInfo?.description ||
+            order?.orderItemsAndTerms?.packageDef?.packageKeyInfo
+              ?.description ||
             order?.keyOrderInformation?.orderCode?.orderCodes?.description ||
             "Unknown Package",
           placedDate: formatDate(order.createdAt),

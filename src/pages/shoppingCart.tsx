@@ -30,7 +30,7 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
   const [cart, setCart] = useState([]);
   const { cartItems, updateTotalPrice } = useCart();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
   const [couponCode, setCouponCode] = useState("");
   const [promoError, setPromoError] = useState("");
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
@@ -126,7 +126,7 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
 
   const fetchCart = useCallback(async () => {
     try {
-      setLoading(true);
+      // setLoading(true);
       const payload = {
         class: "ShoppingCart",
         filters: [
@@ -147,7 +147,7 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
       console.error(error);
       toast.error("Failed to fetch cart");
     } finally {
-      setLoading(false);
+      // setLoading(false);
     }
   }, [user]);
 
