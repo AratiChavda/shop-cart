@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:ucp": "vite build --mode ucp",
+    "build:her": "vite build --mode her",
+    "build:cfp": "vite build --mode cfp",
     "lint": "eslint .",
     "preview": "vite preview"
   },

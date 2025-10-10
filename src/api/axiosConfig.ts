@@ -6,8 +6,7 @@ export interface CustomInternalAxiosRequestConfig
   skipAuth?: boolean;
 }
 
-export const API_BASE_URL =
-  "https://think365.mpstechnologies.com/think365setuptest";
+export const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const api = axios.create({
   baseURL: API_BASE_URL,

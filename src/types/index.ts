@@ -1,14 +1,12 @@
 import { clients } from "@/config/clients";
 
-export type ClientName = "DEV" | "UCP" | "UNP" | "NW" | "UTP";
+export type ClientName = "DEV" | "UCP" | "UNP" | "NW" | "UTP" | "CFP" | "HER";
 export interface Client {
   clientName: ClientName;
-  pubId: string;
   variables: Record<string, string>;
   logo: string;
   journalBrowseURL: string;
   showPromoCode: boolean;
-  apiURL: string;
 }
 
 export type ClientKey = keyof typeof clients;
