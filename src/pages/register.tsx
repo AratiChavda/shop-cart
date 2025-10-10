@@ -184,7 +184,7 @@ export function Register() {
     try {
       const response: any = await fetchGeoDataByZipCode({
         countryCode,
-        postalCode,
+        zipCode: postalCode,
       });
       if (response?.postalCodes?.length) {
         const data = response.postalCodes[0];
