@@ -18,15 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { ADDRESS_CATEGORY, ADDRESS_TYPE } from "@/constant/common";
 import type { AddressStatus, Country } from "@/types";
-import {
-  fetchAllCountries,
-  fetchEntityData,
-  fetchGeoDataByZipCode,
-  setAddress,
-} from "@/api/apiServices";
+import { fetchGeoDataByZipCode, setAddress } from "@/api/apiServices";
 import { toast } from "sonner";
 import { Icons } from "@/components/icons";
 
@@ -43,9 +38,10 @@ const addressSchema = z.object({
   country: z.string().min(1, "Country is required"),
   countryCode: z.string().optional(),
   city: z.string().min(1, "City is required"),
-  postalCode: z.string().min(1, "Postal code required"),
+  zipCode: z.string().min(1, "Postal code required"),
   state: z.string().min(1, "State/Province required"),
   stateCode: z.string().min(1, "State/Province code required"),
+  addressCategory: z.string().min(1, "Please select an address category"),
 });
 
 type addressFormValues = z.infer<typeof addressSchema>;
@@ -55,20 +51,24 @@ type AddressCategoryValues =
 interface AddressFormProps {
   address?: any;
   addressCategory: AddressCategoryValues;
+  countries: Country[];
+  addressStatus: AddressStatus[];
+  isLoading: {
+    countries: boolean;
+    addressStatus: boolean;
+  };
   handleCancel: () => void;
 }
 
 export const AddressForm: React.FC<AddressFormProps> = ({
   address,
   addressCategory,
+  countries,
+  addressStatus,
+  isLoading,
   handleCancel,
 }) => {
-  const [countries, setCountries] = useState<Country[]>([]);
-  const [addressStatus, setAddressStatus] = useState<AddressStatus[]>([]);
   const addressTypes = Object.values(ADDRESS_TYPE);
-  const [isLoading, setIsLoading] = useState({
-    countries: false,
-  });
 
   const form = useForm<addressFormValues>({
     mode: "all",
@@ -84,71 +84,24 @@ export const AddressForm: React.FC<AddressFormProps> = ({
       country: "",
       countryCode: "",
       city: "",
-      postalCode: "",
+      zipCode: "",
       state: "",
       stateCode: "",
     },
   });
 
-  const { reset, trigger, watch } = form;
-  
-  const fetchCountries = useCallback(async () => {
-    setIsLoading((prev) => ({ ...prev, countries: true }));
-    try {
-      const response = await fetchAllCountries();
-      setCountries(response);
-    } catch (error: any) {
-      console.error("Failed to fetch countries:", error);
-      toast.error("Failed to fetch countries");
-    } finally {
-      setIsLoading((prev) => ({ ...prev, countries: false }));
-    }
-  }, []);
+  const { watch, setValue } = form;
 
-  const fetchAddressStatus = useCallback(async () => {
-    setIsLoading((prev) => ({ ...prev, addressStatus: true }));
-    try {
-      const payload = {
-        class: "AddressStatus",
-        fields: "id,status,addressstatus,defaultstatus",
-        filters: [{ path: "active", operator: "is-true", value: "" }],
-      };
-      const response = await fetchEntityData(payload);
-      if (response.content?.length) {
-        setAddressStatus(
-          response.content?.map((item: AddressStatus) => {
-            return {
-              ...item,
-              id: item.id?.toString(),
-            };
-          })
-        );
-      }
-    } catch (error: any) {
-      console.error(error);
-      toast.error("Failed to fetch address status");
-    } finally {
-      setIsLoading((prev) => ({ ...prev, addressStatus: false }));
-    }
-  }, []);
-
-  const handleChangeCountry = (value: any) => {
-    const selectedCountry: any = countries.find(
-      (country: any) => country.name === value
-    );
-    if (selectedCountry) {
-      form.setValue("countryCode", selectedCountry.iso2);
-    }
-  };
+  const country = watch("country");
 
   const getDataBasedOnZipCode = useCallback(async () => {
-    const { countryCode, postalCode } = form.getValues();
-    if (!countryCode || !postalCode) return;
+    const { countryCode, zipCode } = form.getValues();
+    if (!countryCode || !zipCode) return;
 
     try {
       const response: any = await fetchGeoDataByZipCode({
         countryCode,
-        postalCode,
+        zipCode,
       });
       if (response?.postalCodes?.length) {
         const data = response.postalCodes[0];
@@ -167,34 +120,43 @@ export const AddressForm: React.FC<AddressFormProps> = ({
   }, [form]);
 
   useEffect(() => {
-    fetchCountries();
-    fetchAddressStatus();
-  }, [fetchAddressStatus, fetchCountries]);
+    const countryValue = form.getValues("country");
+    if (countryValue && countries && countries.length > 0) {
+      const selectedCountry = countries.find(
+        (country: any) => country.name === countryValue
+      );
+      if (selectedCountry) {
+        form.setValue("countryCode", selectedCountry.iso2, {
+          shouldValidate: true,
+        });
+      } else {
+        form.setValue("countryCode", "", { shouldValidate: true });
+      }
+    }
+  }, [country, form, countries]);
 
   useEffect(() => {
     if (address) {
-      const formData = {
-        firstName: address?.firstName,
-        middleName: address?.middleName,
-        lastName: address?.lastName,
-        addressType: address?.addressType,
-        addressstatus: address?.addressstatus?.id?.toString(),
-        addressName: address?.addressName,
-        addressLine1: address?.addressLine1,
-        addressLine2: address?.addressLine2,
-        addressLine3: address?.addressLine3,
-        country: address?.country,
-        countryCode: address?.countryCode,
-        city: address?.city,
-        postalCode: address?.zipCode,
-        state: address?.state,
-        stateCode: address?.stateCode,
-        addressCategory: addressCategory,
-      };
-      reset(formData);
-      trigger();
+      setValue("firstName", address?.firstName, { shouldValidate: true });
+      setValue("middleName", address?.middleName, { shouldValidate: true });
+      setValue("lastName", address?.lastName, { shouldValidate: true });
+      setValue("addressType", address?.addressType, { shouldValidate: true });
+      setValue("addressstatus", address?.addressstatus?.id?.toString(), {
+        shouldValidate: true,
+      });
+      setValue("addressName", address?.addressName, { shouldValidate: true });
+      setValue("addressLine1", address?.addressLine1, { shouldValidate: true });
+      setValue("addressLine2", address?.addressLine2, { shouldValidate: true });
+      setValue("addressLine3", address?.addressLine3, { shouldValidate: true });
+      setValue("country", address?.country, { shouldValidate: true });
+      setValue("countryCode", address?.countryCode, { shouldValidate: true });
+      setValue("city", address?.city, { shouldValidate: true });
+      setValue("zipCode", address?.zipCode, { shouldValidate: true });
+      setValue("state", address?.state, { shouldValidate: true });
+      setValue("stateCode", address?.stateCode, { shouldValidate: true });
+      setValue("addressCategory", addressCategory, { shouldValidate: true });
     }
-  }, [address, addressCategory, reset, trigger]);
+  }, [address, addressCategory, setValue, countries]);
 
   const onSubmit = useCallback(
     async (data: addressFormValues) => {
@@ -286,10 +248,7 @@ export const AddressForm: React.FC<AddressFormProps> = ({
                 <FormLabel>
                   Address Type <span className="text-destructive">*</span>
                 </FormLabel>
-                <Select
-                  value={watch("addressType")}
-                  onValueChange={field.onChange}
-                >
+                <Select {...field}>
                   <FormControl>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select address type" />
@@ -316,11 +275,7 @@ export const AddressForm: React.FC<AddressFormProps> = ({
                 <FormLabel>
                   Address Status <span className="text-destructive">*</span>
                 </FormLabel>
-                <Select
-                  value={watch("addressstatus")}
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
+                <Select {...field}>
                   <FormControl>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select address status" />
@@ -409,14 +364,7 @@ export const AddressForm: React.FC<AddressFormProps> = ({
                   Country <span className="text-destructive">*</span>
                 </FormLabel>
                 <div className="relative">
-                  <Select
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      handleChangeCountry(value);
-                    }}
-                    defaultValue={field.value}
-                    disabled={isLoading.countries}
-                  >
+                  <Select {...field} disabled={isLoading.countries}>
                     <FormControl>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select country" />
@@ -441,7 +389,7 @@ export const AddressForm: React.FC<AddressFormProps> = ({
 
           <FormField
             control={form.control}
-            name="postalCode"
+            name="zipCode"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
@@ -507,7 +455,7 @@ export const AddressForm: React.FC<AddressFormProps> = ({
         </div>
 
         <div className="flex justify-end gap-2 pt-4">
-          <Button variant="outline" type="button">
+          <Button onClick={handleCancel} variant="outline" type="button">
             Cancel
           </Button>
           <Button type="submit">Update Address</Button>

@@ -6,14 +6,27 @@ import { Badge } from "@/components/ui/badge";
 import { PlusIcon, TruckIcon } from "lucide-react";
 import { AddressForm } from "@/pages/addressForm";
 import { useUser } from "@/hooks/useUser";
-import { fetchEntityData } from "@/api/apiServices";
+import { fetchEntityData, setAddress } from "@/api/apiServices";
 import { toast } from "sonner";
-import type { Address } from "@/types";
+import type { Address, AddressStatus, Country } from "@/types";
 import { ADDRESS_CATEGORY } from "@/constant/common";
 
-export const ShippingAddress = () => {
+interface ShippingAddressProps {
+  countries: Country[];
+  addressStatus: AddressStatus[];
+  isLoading: {
+    countries: boolean;
+    addressStatus: boolean;
+  };
+}
+
+export const ShippingAddress: React.FC<ShippingAddressProps> = ({
+  countries,
+  addressStatus,
+  isLoading,
+}) => {
   const { user } = useUser();
-  const [address, setAddress] = useState<any>(null);
+  const [addresses, setAddresses] = useState<any>(null);
   const [shippingAddresses, setShippingAddresses] = useState<Address[]>([]);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
 
@@ -21,25 +34,31 @@ export const ShippingAddress = () => {
     if (!user?.customer.customerId) return;
     try {
       const payload = {
-        class: "CustomerDetails",
-        fields: "customerAddresses",
+        class: "CustomerAddresses",
+        fields: "address",
         filters: [
           {
-            path: "customerId",
+            path: "customer.customerId",
             operator: "equals",
             value: user?.customer.customerId.toString(),
           },
           {
-            path: "customerAddresses.address.addressCategory",
-            operator: "in",
+            path: "address.addressCategory",
+            operator: "is-not-null",
+            value: "",
+          },
+          {
+            path: "address.addressCategory",
+            operator: "like",
             value: ADDRESS_CATEGORY.SHIPPING,
           },
         ],
       };
+
       const response = await fetchEntityData(payload);
       if (response.content?.length) {
         setShippingAddresses(
-          response.content?.[0]?.customerAddresses?.map((addr: any) => ({
+          response.content?.map((addr: any) => ({
             ...addr?.address,
           })) || []
         );
@@ -56,7 +75,7 @@ export const ShippingAddress = () => {
 
   const onCancel = () => {
     fetchShippingAddresses();
-    setAddress(null);
+    setAddresses(null);
     setIsAddingAddress(false);
   };
 
@@ -64,17 +83,21 @@ export const ShippingAddress = () => {
     const address = shippingAddresses.find(
       (addr) => addr?.addressId === addressId
     );
-    setAddress(address);
+    setAddresses(address);
     setIsAddingAddress(true);
   };
 
-  const setDefaultShippingAddress = (id: number) => {
-    setShippingAddresses(
-      shippingAddresses.map((addr) => ({
-        ...addr,
-        primaryAddress: addr?.addressId === id,
-      }))
-    );
+  const setDefaultShippingAddress = async (id: number) => {
+    const address = shippingAddresses.find((addr) => addr?.addressId === id);
+    const payload = {
+      ...address,
+      primaryAddress: true,
+    };
+    const response: any = await setAddress(payload);
+    if (response) {
+      toast.success("Shipping address marked as default");
+      fetchShippingAddresses();
+    }
   };
 
   // const deleteShippingAddress = (id: string) => {
@@ -111,8 +134,11 @@ export const ShippingAddress = () => {
               </CardHeader>
               <CardContent>
                 <AddressForm
-                  address={address}
+                  address={addresses}
                   addressCategory={ADDRESS_CATEGORY.SHIPPING}
+                  countries={countries}
+                  addressStatus={addressStatus}
+                  isLoading={isLoading}
                   handleCancel={onCancel}
                 />
               </CardContent>

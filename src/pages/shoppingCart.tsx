@@ -137,11 +137,45 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
           },
         ],
         fields:
-          "cartItems.itemType, cartItems.itemId, cartItems.itemName, cartItems.quantity, cartItems.unitPrice, cartItems.totalPrice, cartItems.journalConfiguration.journalCoverImgSrc,cartItems.journalConfiguration.orderClass.orderClassName",
+          "cartItems.itemType, cartItems.itemId, cartItems.itemName, cartItems.quantity, cartItems.unitPrice, cartItems.totalPrice, cartItems.journalConfiguration.orderClass.ocId,cartItems.journalConfiguration.orderClass.orderClassName",
       };
       const response = await fetchEntityData(payload);
       if (response.content?.length) {
-        setCart(response.content?.[0]?.cartItems || []);
+        const uniqueOcIds = Array.from(
+          new Set(
+            response.content?.[0]?.cartItems?.map(
+              (item: any) => item?.journalConfiguration?.orderClass?.ocId
+            )
+          )
+        );
+        if (uniqueOcIds.length > 0) {
+          const imagePayload = {
+            class: "OcMapping",
+            fields: "orderClass.ocId,journalCoverImgSrc",
+            filters: [
+              {
+                path: "orderClass.ocId",
+                operator: "in",
+                value: uniqueOcIds.join(","),
+              },
+            ],
+          };
+          const imageResponse = await fetchEntityData(imagePayload);
+          const cartItems = response.content?.[0]?.cartItems || [];
+          cartItems.forEach((item: any) => {
+            const ocId = item?.journalConfiguration?.orderClass?.ocId;
+            if (ocId) {
+              const mapping = imageResponse.content?.find(
+                (mapping: any) => mapping?.orderClass?.ocId === ocId
+              );
+              if (mapping) {
+                item.journalConfiguration.journalCoverImgSrc =
+                  mapping.journalCoverImgSrc;
+              }
+            }
+          });
+          setCart(cartItems);
+        }
       }
     } catch (error: any) {
       console.error(error);

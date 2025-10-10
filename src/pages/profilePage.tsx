@@ -24,9 +24,16 @@ import { useParams } from "react-router-dom";
 import { useUser } from "@/hooks/useUser";
 import { ADDRESS_CATEGORY } from "@/constant/common";
 import { toast } from "sonner";
-import { fetchEntityData } from "@/api/apiServices";
+import { fetchAllCountries, fetchEntityData } from "@/api/apiServices";
+import type { AddressStatus, Country } from "@/types";
 
 function ProfilePage() {
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [addressStatus, setAddressStatus] = useState<AddressStatus[]>([]);
+  const [isLoading, setIsLoading] = useState({
+    countries: false,
+    addressStatus: false,
+  });
   const [activeTab, setActiveTab] = useState("profile");
   const [billingAddress, setBillingAddress] = useState(null);
   const params = useParams();
@@ -36,25 +43,30 @@ function ProfilePage() {
     if (!user?.customer.customerId) return;
     try {
       const payload = {
-        class: "CustomerDetails",
-        fields: "customerAddresses",
+        class: "CustomerAddresses",
+        fields: "address",
         filters: [
           {
-            path: "customerId",
+            path: "customer.customerId",
             operator: "equals",
             value: user?.customer.customerId.toString(),
           },
           {
-            path: "customerAddresses.address.addressCategory",
-            operator: "in",
+            path: "address.addressCategory",
+            operator: "is-not-null",
+            value: "",
+          },
+          {
+            path: "address.addressCategory",
+            operator: "like",
             value: ADDRESS_CATEGORY.BILLING,
           },
         ],
       };
+
       const response = await fetchEntityData(payload);
       if (response.content?.length) {
-        const billingAddress =
-          response.content?.[0]?.customerAddresses[0]?.address;
+        const billingAddress = response.content?.[0]?.address;
         setBillingAddress(billingAddress || null);
       }
     } catch (error: any) {
@@ -62,6 +74,51 @@ function ProfilePage() {
       toast.error("Failed to fetch billing addresses");
     }
   }, [user?.customer.customerId]);
+
+  const fetchCountries = useCallback(async () => {
+    setIsLoading((prev) => ({ ...prev, countries: true }));
+    try {
+      const response = await fetchAllCountries();
+      setCountries(response);
+    } catch (error: any) {
+      console.error("Failed to fetch countries:", error);
+      toast.error("Failed to fetch countries");
+    } finally {
+      setIsLoading((prev) => ({ ...prev, countries: false }));
+    }
+  }, []);
+
+  const fetchAddressStatus = useCallback(async () => {
+    setIsLoading((prev) => ({ ...prev, addressStatus: true }));
+    try {
+      const payload = {
+        class: "AddressStatus",
+        fields: "id,status,addressstatus,defaultstatus",
+        filters: [{ path: "active", operator: "is-true", value: "" }],
+      };
+      const response = await fetchEntityData(payload);
+      if (response.content?.length) {
+        setAddressStatus(
+          response.content?.map((item: AddressStatus) => {
+            return {
+              ...item,
+              id: item.id?.toString(),
+            };
+          })
+        );
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Failed to fetch address status");
+    } finally {
+      setIsLoading((prev) => ({ ...prev, addressStatus: false }));
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCountries();
+    fetchAddressStatus();
+  }, [fetchAddressStatus, fetchCountries]);
 
   const onBillingSubmit = () => {
     fetchBillingAddresse();
@@ -224,6 +281,9 @@ function ProfilePage() {
                     <AddressForm
                       address={billingAddress}
                       addressCategory={ADDRESS_CATEGORY.BILLING}
+                      countries={countries}
+                      addressStatus={addressStatus}
+                      isLoading={isLoading}
                       handleCancel={onBillingSubmit}
                     />
                   </CardContent>
@@ -231,7 +291,11 @@ function ProfilePage() {
               </TabsContent>
 
               <TabsContent value="shipping">
-                <ShippingAddress />
+                <ShippingAddress
+                  countries={countries}
+                  addressStatus={addressStatus}
+                  isLoading={isLoading}
+                />
               </TabsContent>
             </div>
           </Tabs>

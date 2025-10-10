@@ -74,11 +74,11 @@ export const fetchAllCountries = async () => {
 
 export const fetchGeoDataByZipCode = async (payload: {
   countryCode: string;
-  postalCode: string;
+  zipCode: string;
 }) => {
   try {
     const response = await api.get(
-      `${API_ENDPOINTS.location.geoDataByZipCode}/${payload?.countryCode}/${payload?.postalCode}`,
+      `${API_ENDPOINTS.location.geoDataByZipCode}/${payload?.countryCode}/${payload?.zipCode}`,
       {
         skipAuth: true,
       } as CustomInternalAxiosRequestConfig
