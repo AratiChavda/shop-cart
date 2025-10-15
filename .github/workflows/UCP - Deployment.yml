@@ -1,0 +1,30 @@
+name: MPS - Deployment
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy-frontend:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build UCP frontend
+        run: |
+          export DISABLE_ESLINT_PLUGIN=true
+          npm run build:ucp
+          sudo rm -rf /mnt/ECOM/frontend/*
+          sudo cp -r build/* /mnt/ECOM/frontend/
