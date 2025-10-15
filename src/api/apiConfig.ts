@@ -26,6 +26,10 @@ const API_ENDPOINTS = {
     set: `${API_BASE_URL}/v1/cart/items`,
     updateCartItemQuantity: `${API_BASE_URL}/v1/cart/items`,
     delete: `${API_BASE_URL}/v1/cart/items`,
+    address: `${API_BASE_URL}/v1/cart/address`,
+  },
+  order: {
+    place: `${API_BASE_URL}/v1/place/orders`,
   },
   entityData: `${API_BASE_URL}/v1/data/fetch`,
   location: {

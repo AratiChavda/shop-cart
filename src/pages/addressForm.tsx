@@ -167,6 +167,7 @@ export const AddressForm: React.FC<AddressFormProps> = ({
         ...data,
         addressId: address?.addressId || undefined,
         sameAsCustomer: false,
+        primaryAddress: address?.primaryAddress || false,
         status: selectedAddressStatus?.status,
         addressstatus: data?.addressstatus
           ? { id: data?.addressstatus }

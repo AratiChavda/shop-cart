@@ -1,4 +1,5 @@
 import { addressBadgeColors } from "@/constant/common";
+import { formatAddress } from "@/utils/common";
 import { Mail, Phone } from "lucide-react";
 
 export const AddressCard = ({
@@ -41,13 +42,7 @@ export const AddressCard = ({
       </div>
 
       <div className="text-sm text-muted-foreground space-y-1">
-        <p>{address.addressLine1}</p>
-        {address.addressLine2 && <p>{address.addressLine2}</p>}
-        {address.addressLine3 && <p>{address.addressLine3}</p>}
-        <p>
-          {address.city}, {address.state} {address.postalCode}
-        </p>
-        <p>{address.country}</p>
+        {formatAddress(address)?.map((line) => (line ? <p>{line}</p> : ""))}
       </div>
 
       {(address.phone || address.email) && (

@@ -10,6 +10,7 @@ import { fetchEntityData, setAddress } from "@/api/apiServices";
 import { toast } from "sonner";
 import type { Address, AddressStatus, Country } from "@/types";
 import { ADDRESS_CATEGORY } from "@/constant/common";
+import { formatAddress, getFullName } from "@/utils/common";
 
 interface ShippingAddressProps {
   countries: Country[];
@@ -169,7 +170,11 @@ export const ShippingAddress: React.FC<ShippingAddressProps> = ({
                 <div className="flex justify-between items-start">
                   <div>
                     <h4 className="font-medium">
-                      {address.firstName} {address.lastName}
+                      {getFullName(
+                        address.firstName,
+                        address.middleName,
+                        address.lastName
+                      )}
                       {address?.primaryAddress && (
                         <Badge variant="secondary" className="ml-2">
                           Default
@@ -202,13 +207,9 @@ export const ShippingAddress: React.FC<ShippingAddressProps> = ({
                   </div>
                 </div>
                 <div className="mt-3 text-sm space-y-1">
-                  <p>{address.addressLine1}</p>
-                  {address.addressLine2 && <p>{address.addressLine2}</p>}
-                  {address.addressLine3 && <p>{address.addressLine3}</p>}
-                  <p>
-                    {address.city}, {address.state} {address.zipCode}
-                  </p>
-                  <p>{address.country}</p>
+                  {formatAddress(address)?.map((line) =>
+                    line ? <p>{line}</p> : ""
+                  )}
                 </div>
               </motion.div>
             ))}

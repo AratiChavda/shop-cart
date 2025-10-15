@@ -249,6 +249,32 @@ export const setAddress = async (payload: any) => {
   }
 };
 
+export const setCartAddress = async (payload: any) => {
+  try {
+    const response = await api.post(API_ENDPOINTS.cart.address, payload);
+    if (response.data?.success) {
+      return response?.data;
+    }
+    throw response?.data;
+  } catch (error: any) {
+    console.error(error);
+    throw error;
+  }
+};
+
+export const placeOrder = async () => {
+  try {
+    const response = await api.post(API_ENDPOINTS.order.place,{});
+    if (response.data?.success) {
+      return response?.data;
+    }
+    throw response?.data;
+  } catch (error: any) {
+    console.error(error);
+    throw error;
+  }
+};
+
 export const fetchCustomers = async () => {
   try {
     const response = await api.get(API_ENDPOINTS.customer.fetch);

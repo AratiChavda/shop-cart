@@ -49,7 +49,7 @@ const DashboardLayout = () => {
 
       <main className="mt-20 px-4 flex justify-center mb-4">
         <div className="w-full max-w-6xl grid grid-cols-1 gap-6">
-          <div className="backdrop-blur-md bg-gradient-to-tr from-primary via-primary/90 to-primary/75 rounded-xl p-6 shadow-xl">
+          <div className="backdrop-blur-md bg-gradient-to-tr from-primary via-primary/90 to-primary/75 rounded-xl p-4 shadow-xl">
             <Breadcrumb>
               <BreadcrumbList>
                 {breadcrumbs.map((item, index) => (

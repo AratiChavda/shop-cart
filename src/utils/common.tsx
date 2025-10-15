@@ -1,4 +1,5 @@
 import { ORDER_STATUS, PAYMENT_STATUS } from "@/constant/common";
+import type { Address } from "@/types";
 import { format } from "date-fns";
 
 export function formatDate(date: number, dateFormat?: "mm/dd/yyyy") {
@@ -84,4 +85,32 @@ export const getPaymentVariant = (
     default:
       return "default";
   }
+};
+
+export const getFullName = (
+  firstName: string,
+  middleName: string,
+  lastName: string
+) => {
+  const name = [firstName, middleName, lastName].filter(Boolean).join(" ");
+  return name;
+};
+
+export const formatAddress = (address: Address) => {
+  const {
+    addressLine1,
+    addressLine2,
+    addressLine3,
+    city,
+    state,
+    zipCode,
+    country,
+  } = address;
+  return [
+    addressLine1,
+    addressLine2,
+    addressLine3,
+    `${city}, ${state}, ${zipCode}`,
+    country,
+  ];
 };

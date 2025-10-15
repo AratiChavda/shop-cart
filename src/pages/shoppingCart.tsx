@@ -1,4 +1,3 @@
-import { useCart } from "@/context/cartContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,132 +18,156 @@ import { toast } from "sonner";
 import {
   deleteCartItem,
   fetchEntityData,
+  placeOrder,
+  setCartAddress,
   updateCartItemQuantity,
 } from "@/api/apiServices";
+import { ADDRESS_CATEGORY } from "@/constant/common";
+import type { Address } from "@/types";
+
+interface CartItem {
+  id: number;
+  itemName: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  journalConfiguration: {
+    orderClass: {
+      ocId: number;
+      orderClassName: string;
+    };
+    journalCoverImgSrc?: string;
+  };
+  shippingAddress: Address;
+  billingAddress: Address;
+}
 
 interface ShoppingCartProps {
-  user: any;
+  user: { id: string; customer: { customerId: string } } | null;
 }
+
 const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
   const { journalBrowseURL } = useClient();
-  const [cart, setCart] = useState([]);
-  const { cartItems, updateTotalPrice } = useCart();
-  const navigate = useNavigate();
-  // const [loading, setLoading] = useState(true);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isLoading, setIsLoading] = useState<{
+    placeOrder: boolean;
+    shipping: boolean;
+    billing: boolean;
+    cart: boolean;
+  }>({
+    placeOrder: false,
+    shipping: false,
+    billing: false,
+    cart: false,
+  });
+  const [billingAddress, setBillingAddress] = useState<Address | null>(null);
+  const [shippingAddress, setShippingAddress] = useState<Address[]>([]);
   const [couponCode, setCouponCode] = useState("");
   const [promoError, setPromoError] = useState("");
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [discount, setDiscount] = useState(0);
-  const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [selectedAddressId, setSelectedAddressId] = useState<
+    number | undefined
+  >(undefined);
   const [sameAsBilling, setSameAsBilling] = useState(false);
-  const [tax] = useState(0.1);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [tax] = useState(0.1); // 10% tax rate
   const [isSticky, setIsSticky] = useState(false);
+  const navigate = useNavigate();
 
-  const addresses = [
-    {
-      id: "1",
-      firstName: "John",
-      middleInitial: "A",
-      lastName: "Doe",
-      phone: "123-456-7890",
-      email: "john.doe@example.com",
-      addressType: "residential",
-      addressLine1: "123 Main St",
-      addressLine2: "Apt 4B",
-      addressLine3: "",
-      city: "City",
-      postalCode: "90210",
-      state: "CA",
-      country: "USA",
-    },
-    {
-      id: "2",
-      firstName: "Jane",
-      middleInitial: "",
-      lastName: "Smith",
-      phone: "987-654-3210",
-      email: "jane.smith@example.com",
-      addressType: "business",
-      addressLine1: "456 Oak Ave",
-      addressLine2: "Suite 100",
-      addressLine3: "",
-      city: "City",
-      postalCode: "90211",
-      state: "CA",
-      country: "USA",
-    },
-    {
-      id: "3",
-      firstName: "Alice",
-      middleInitial: "B",
-      lastName: "Johnson",
-      phone: "555-123-4567",
-      email: "alice.johnson@example.com",
-      addressType: "other",
-      addressLine1: "789 Pine Rd",
-      addressLine2: "",
-      addressLine3: "Building C",
-      city: "City",
-      postalCode: "90212",
-      state: "CA",
-      country: "USA",
-    },
-    {
-      id: "4",
-      firstName: "Bob",
-      middleInitial: "C",
-      lastName: "Williams",
-      phone: "444-987-6543",
-      email: "bob.williams@example.com",
-      addressType: "residential",
-      addressLine1: "101 Maple Dr",
-      addressLine2: "",
-      addressLine3: "",
-      city: "City",
-      postalCode: "90213",
-      state: "CA",
-      country: "USA",
-    },
-  ];
+  const fetchBillingAddress = useCallback(async () => {
+    if (!user?.customer.customerId) return null;
+    setIsLoading((prev) => ({ ...prev, billing: true }));
+    try {
+      const payload = {
+        class: "CustomerAddresses",
+        fields: "address",
+        filters: [
+          {
+            path: "customer.customerId",
+            operator: "equals",
+            value: user?.customer.customerId.toString(),
+          },
+          {
+            path: "address.addressCategory",
+            operator: "is-not-null",
+            value: "",
+          },
+          {
+            path: "address.addressCategory",
+            operator: "like",
+            value: ADDRESS_CATEGORY.BILLING,
+          },
+        ],
+      };
+      const response = await fetchEntityData(payload);
+      return response.content?.[0]?.address || null;
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to fetch billing address");
+      return null;
+    } finally {
+      setIsLoading((prev) => ({ ...prev, billing: false }));
+    }
+  }, [user?.customer.customerId]);
 
-  const billingAddress = {
-    id: "billing",
-    firstName: "John",
-    middleInitial: "A",
-    lastName: "Doe",
-    phone: "123-456-7890",
-    email: "john.doe@example.com",
-    addressType: "residential",
-    addressLine1: "123 Main St",
-    addressLine2: "Apt 4B",
-    addressLine3: "",
-    city: "City",
-    postalCode: "90210",
-    state: "CA",
-    country: "USA",
-  };
+  const fetchShippingAddresses = useCallback(async () => {
+    if (!user?.customer.customerId) return [];
+    setIsLoading((prev) => ({ ...prev, shipping: true }));
+    try {
+      const payload = {
+        class: "CustomerAddresses",
+        fields: "address",
+        filters: [
+          {
+            path: "customer.customerId",
+            operator: "equals",
+            value: user?.customer.customerId.toString(),
+          },
+          {
+            path: "address.addressCategory",
+            operator: "is-not-null",
+            value: "",
+          },
+          {
+            path: "address.addressCategory",
+            operator: "like",
+            value: ADDRESS_CATEGORY.SHIPPING,
+          },
+        ],
+      };
+      const response = await fetchEntityData(payload);
+      return response.content?.map((addr: any) => addr.address) || [];
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to fetch shipping addresses");
+      return [];
+    } finally {
+      setIsLoading((prev) => ({ ...prev, shipping: false }));
+    }
+  }, [user?.customer.customerId]);
 
   const fetchCart = useCallback(async () => {
+    if (!user?.id) return null;
+    setIsLoading((prev) => ({ ...prev, cart: true }));
     try {
-      // setLoading(true);
       const payload = {
         class: "ShoppingCart",
         filters: [
           {
             path: "user.id",
             operator: "equals",
-            value: user?.id,
+            value: user.id,
           },
         ],
         fields:
-          "cartItems.itemType, cartItems.itemId, cartItems.itemName, cartItems.quantity, cartItems.unitPrice, cartItems.totalPrice, cartItems.journalConfiguration.orderClass.ocId,cartItems.journalConfiguration.orderClass.orderClassName",
+          "shippingAddress.addressId, billingAddress.addressId, cartItems.itemType, cartItems.itemId, cartItems.itemName, cartItems.quantity, cartItems.unitPrice, cartItems.totalPrice, cartItems.journalConfiguration.orderClass.ocId, cartItems.journalConfiguration.orderClass.orderClassName",
       };
       const response = await fetchEntityData(payload);
-      if (response.content?.length) {
+      const cartItems = response.content?.[0]?.cartItems || [];
+      if (cartItems.length) {
         const uniqueOcIds = Array.from(
           new Set(
-            response.content?.[0]?.cartItems?.map(
-              (item: any) => item?.journalConfiguration?.orderClass?.ocId
+            cartItems.map(
+              (item: CartItem) => item.journalConfiguration.orderClass.ocId
             )
           )
         );
@@ -161,56 +184,125 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
             ],
           };
           const imageResponse = await fetchEntityData(imagePayload);
-          const cartItems = response.content?.[0]?.cartItems || [];
-          cartItems.forEach((item: any) => {
-            const ocId = item?.journalConfiguration?.orderClass?.ocId;
-            if (ocId) {
-              const mapping = imageResponse.content?.find(
-                (mapping: any) => mapping?.orderClass?.ocId === ocId
-              );
-              if (mapping) {
-                item.journalConfiguration.journalCoverImgSrc =
-                  mapping.journalCoverImgSrc;
-              }
+          cartItems.forEach((item: CartItem) => {
+            const mapping = imageResponse.content?.find(
+              (m: any) =>
+                m.orderClass.ocId === item.journalConfiguration.orderClass.ocId
+            );
+            if (mapping) {
+              item.journalConfiguration.journalCoverImgSrc =
+                mapping.journalCoverImgSrc;
             }
           });
-          setCart(cartItems);
         }
       }
+      return { cartItems, cartData: response.content?.[0] };
     } catch (error: any) {
-      console.error(error);
-      toast.error("Failed to fetch cart");
+      toast.error(error?.message || "Failed to fetch cart");
+      return null;
     } finally {
-      // setLoading(false);
+      setIsLoading((prev) => ({ ...prev, cart: false }));
     }
-  }, [user]);
+  }, [user?.id]);
+
+  const fetchAllData = useCallback(async () => {
+    if (!user?.id || !user?.customer.customerId) return;
+    try {
+      const [billingAddressData, shippingAddressData, cartResult] =
+        await Promise.all([
+          fetchBillingAddress(),
+          fetchShippingAddresses(),
+          fetchCart(),
+        ]);
+
+      if (cartResult?.cartItems) {
+        setCart(cartResult.cartItems);
+      } else {
+        setCart([]);
+      }
+
+      setBillingAddress(billingAddressData);
+      setShippingAddress(shippingAddressData);
+
+      if (cartResult?.cartData) {
+        const cartBillingAddressId =
+          cartResult.cartData.billingAddress?.addressId;
+        const cartShippingAddressId =
+          cartResult.cartData.shippingAddress?.addressId;
+
+        const isValidShippingAddress = shippingAddressData.some(
+          (addr: Address) => addr.addressId === cartShippingAddressId
+        );
+
+        setSelectedAddressId(
+          isValidShippingAddress ? cartShippingAddressId : undefined
+        );
+
+        setSameAsBilling(
+          cartBillingAddressId &&
+            cartShippingAddressId &&
+            cartBillingAddressId === cartShippingAddressId
+        );
+      }
+    } catch {
+      toast.error("Failed to fetch initial data");
+    }
+  }, [
+    fetchBillingAddress,
+    fetchShippingAddresses,
+    fetchCart,
+    user?.id,
+    user?.customer.customerId,
+  ]);
+
+  const saveAddresses = useCallback(
+    async (newSelectedAddressId: number | undefined) => {
+      if (!billingAddress || !newSelectedAddressId) {
+        return;
+      }
+      try {
+        const payload = {
+          shippingAddressId: newSelectedAddressId,
+          billingAddressId: billingAddress.addressId,
+        };
+        const response = await setCartAddress(payload);
+        if (response?.success) {
+          toast.success("Addresses saved successfully");
+        } else {
+          toast.error("Failed to save addresses");
+        }
+      } catch (error: any) {
+        toast.error(error?.message || "Failed to save addresses");
+      }
+    },
+    [billingAddress]
+  );
 
   useEffect(() => {
-    fetchCart();
-    const handleScroll = () => {
-      setIsSticky(window.scrollY > 100);
-    };
+    const handleScroll = () => setIsSticky(window.scrollY > 100);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [fetchCart]);
+  }, []);
+
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
 
   const handleApplyPromoCode = async () => {
     if (!couponCode) {
       setPromoError("Please enter a promo code");
       return;
     }
-
     setIsApplyingPromo(true);
     setPromoError("");
-
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
-
       const isValidPromo = couponCode.toUpperCase() === "SAVE20";
       if (isValidPromo) {
         const subtotal = parseFloat(calculateSubtotal());
         const discountAmount = subtotal * 0.2;
         setDiscount(discountAmount);
+        toast.success("Promo code applied!");
       } else {
         setPromoError("Invalid promo code");
       }
@@ -220,33 +312,50 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
       setIsApplyingPromo(false);
     }
   };
+
   const handleRemovePromo = () => {
     setCouponCode("");
     setDiscount(0);
     setPromoError("");
+    toast.info("Promo code removed");
   };
 
-  const handleSameAsBilling = (checked: any) => {
+  const handleSameAsBilling = (checked: boolean) => {
     setSameAsBilling(checked);
-    if (checked) {
-      setSelectedAddressId("billing");
+    if (checked && billingAddress) {
+      setSelectedAddressId(billingAddress.addressId);
+      saveAddresses(billingAddress.addressId);
     } else {
-      setSelectedAddressId("");
+      setSelectedAddressId(undefined);
     }
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (!selectedAddressId) {
       toast.error("Please select a shipping address");
       return;
     }
-    updateTotalPrice(parseFloat(calculateTotal()));
-    navigate("/dashboard/checkout");
+    setIsLoading((prev) => ({ ...prev, placeOrder: true }));
+    try {
+      const response = await placeOrder();
+      if (!response?.success) {
+        throw new Error(response?.message || "Failed to place order");
+      }
+      toast.success("Order placed successfully");
+      navigate("/dashboard/checkout");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to place order");
+    } finally {
+      setIsLoading((prev) => ({ ...prev, placeOrder: false }));
+    }
   };
 
   const calculateSubtotal = () => {
-    return cartItems
-      .reduce((total, item) => total + item.price * item.quantity, 0)
+    return cart
+      .reduce(
+        (total: number, item: CartItem) => total + (item.totalPrice || 0),
+        0
+      )
       .toFixed(2);
   };
 
@@ -256,81 +365,109 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
     return ((subtotal - discountAmount) * (1 + tax)).toFixed(2);
   };
 
+  const refreshCart = async () => {
+    try {
+      const cartResult = await fetchCart();
+      if (cartResult?.cartItems) {
+        setCart(cartResult.cartItems);
+      } else {
+        setCart([]);
+      }
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to fetch cart");
+    }
+  };
+
   const handleQuantityChange = async (id: number, quantity: number) => {
-    const payload = {
-      cartItemId: id,
-      quantity,
-    };
-    const response = await updateCartItemQuantity(payload);
-    if (response) {
-      fetchCart();
+    if (quantity < 1) return;
+    try {
+      const payload = { cartItemId: id, quantity };
+      await updateCartItemQuantity(payload);
+      refreshCart();
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update quantity");
     }
   };
 
   const handleDeleteItem = async (id: number) => {
-    const response = await deleteCartItem(id);
-    if (response) {
-      fetchCart();
+    try {
+      await deleteCartItem(id);
+      refreshCart();
+      toast.success("Item removed from cart");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to remove item");
     }
   };
 
-  const displayAddresses = sameAsBilling ? [billingAddress] : addresses;
+  const displayAddresses = sameAsBilling ? [billingAddress] : shippingAddress;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
-      className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 font-sans h-full"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="container mx-auto py-6 px-4 sm:px-6 lg:px-8 min-h-screen"
     >
       {cart.length === 0 ? (
         <motion.div
-          initial={{ scale: 0.8 }}
+          initial={{ scale: 0.95 }}
           animate={{ scale: 1 }}
-          className="w-full text-center py-12 bg-white rounded-xl shadow-sm"
+          className="text-center py-16 bg-white rounded-xl shadow-sm"
         >
-          <p className="text-lg text-gray-600">Your cart is empty</p>
+          <h2 className="text-2xl font-semibold text-gray-800 mb-4">
+            Your Cart is Empty
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Start exploring our collection of journals!
+          </p>
           <Button
-            className="mt-4 bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-full"
+            className="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-full"
             onClick={() => (window.location.href = journalBrowseURL)}
           >
-            Start browsing journals <ArrowRightIcon className="h-4 w-4" />
+            Browse Journals <ArrowRightIcon className="ml-2 h-4 w-4" />
           </Button>
         </motion.div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              Shopping Cart
+            </h2>
             <AnimatePresence>
-              {cart.map((item: any) => (
+              {cart.map((item) => (
                 <motion.div
                   key={item.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
+                  exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.3 }}
-                  className="flex items-center justify-between p-4 sm:p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300"
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
                 >
-                  <div className="flex items-center gap-4 sm:gap-6">
+                  <div className="flex items-center gap-4 w-full sm:w-auto">
                     <img
-                      src={item?.journalConfiguration?.journalCoverImgSrc}
-                      alt={
-                        item?.journalConfiguration?.orderClass?.orderClassName
+                      src={
+                        item.journalConfiguration.journalCoverImgSrc ||
+                        "/images/placeholder.jpg"
                       }
+                      alt={item.journalConfiguration.orderClass.orderClassName}
                       className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-md border border-gray-200"
+                      onError={(e) =>
+                        (e.currentTarget.src = "/images/placeholder.jpg")
+                      }
                     />
-                    <div className="space-y-1">
-                      <p className="text-md font-semibold text-gray-800 max-w-sm">
-                        {item?.itemName}
+                    <div className="space-y-1 flex-1">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-800">
+                        {item.itemName}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        Price: ${item.totalPrice.toFixed(2)}
                       </p>
-                      <p className="text-sm font-medium text-gray-600">
-                        Price: ${item?.totalPrice?.toFixed(2)}
-                      </p>
-                      <p className="text-sm font-medium text-gray-600">
-                        Quantity: {item?.quantity}
+                      <p className="text-sm text-gray-600">
+                        Quantity: {item.quantity}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2 mt-4 sm:mt-0">
                     <Button
                       variant="outline"
                       size="sm"
@@ -338,7 +475,7 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
                         handleQuantityChange(item.id, item.quantity - 1)
                       }
                       disabled={item.quantity <= 1}
-                      className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                      aria-label="Decrease quantity"
                     >
                       <MinusIcon className="h-4 w-4" />
                     </Button>
@@ -351,7 +488,7 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
                       onClick={() =>
                         handleQuantityChange(item.id, item.quantity + 1)
                       }
-                      className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                      aria-label="Increase quantity"
                     >
                       <PlusIcon className="h-4 w-4" />
                     </Button>
@@ -359,6 +496,7 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
                       variant="destructive"
                       size="sm"
                       onClick={() => handleDeleteItem(item.id)}
+                      aria-label="Remove item"
                     >
                       <TrashIcon className="h-4 w-4" />
                     </Button>
@@ -369,28 +507,36 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
           </div>
 
           <motion.div
-            className={`p-4 sm:p-6 bg-white rounded-lg shadow-sm lg:sticky top-4 transition-all duration-300 ${
-              isSticky ? "lg:shadow-md" : ""
+            className={`p-6 bg-white rounded-lg shadow-lg lg:sticky top-4 transition-shadow ${
+              isSticky ? "lg:shadow-xl" : ""
             }`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">
+            <h3 className="text-xl font-bold text-gray-800 mb-6">
               Order Summary
             </h3>
-            <div className="space-y-4 sm:space-y-6">
+            <div className="space-y-6">
               <div>
                 <label className="text-sm font-medium text-gray-600 mb-2 block">
                   Billing Address
                 </label>
-                <AddressCard address={billingAddress} showIcons={false} />
+                {billingAddress ? (
+                  <AddressCard address={billingAddress} showIcons={false} />
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    No billing address available
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-600 flex items-center gap-2 mb-2">
-                  Shipping Address
-                  <Sheet>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-sm font-medium text-gray-600">
+                    Shipping Address
+                  </label>
+                  <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                     <SheetTrigger
                       disabled={sameAsBilling}
                       className="text-primary underline text-sm font-medium disabled:opacity-50"
@@ -399,28 +545,32 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
                     </SheetTrigger>
                     <SheetContent
                       side="right"
-                      className="max-h-screen overflow-y-auto p-6 sm:max-w-2xl w-full"
+                      className="max-h-screen overflow-y-auto p-6 sm:max-w-lg w-full"
                     >
                       <SheetHeader>
-                        <SheetTitle className="text-xl font-bold text-center mb-4">
+                        <SheetTitle className="text-xl font-bold text-center">
                           Select Shipping Address
                         </SheetTitle>
                       </SheetHeader>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4 mt-4">
                         {displayAddresses.map((address) => (
                           <AddressCard
-                            key={address.id}
+                            key={address?.addressId}
                             address={address}
-                            isSelected={selectedAddressId === address.id}
-                            onClick={() => setSelectedAddressId(address.id)}
+                            isSelected={
+                              selectedAddressId === address?.addressId
+                            }
+                            onClick={() => {
+                              setSelectedAddressId(address?.addressId);
+                              setIsSheetOpen(false);
+                              saveAddresses(address?.addressId);
+                            }}
                           />
                         ))}
                       </div>
                     </SheetContent>
                   </Sheet>
-                </label>
-
+                </div>
                 <div className="flex items-center gap-2 mb-3">
                   <Checkbox
                     id="sameAsBilling"
@@ -434,80 +584,92 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
                     Same as Billing Address
                   </label>
                 </div>
-
-                {sameAsBilling ? (
+                {sameAsBilling && billingAddress ? (
                   <AddressCard address={billingAddress} showIcons={false} />
                 ) : selectedAddressId ? (
                   <AddressCard
-                    address={addresses.find((a) => a.id === selectedAddressId)!}
+                    address={
+                      shippingAddress.find(
+                        (a) => a.addressId === selectedAddressId
+                      )!
+                    }
                     showIcons={false}
                   />
-                ) : null}
-              </div>
-
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Coupon code"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
-                />
-                {discount > 0 ? (
-                  <Button variant="outline" onClick={handleRemovePromo}>
-                    Remove
-                  </Button>
                 ) : (
-                  <Button
-                    onClick={handleApplyPromoCode}
-                    disabled={isApplyingPromo}
-                  >
-                    {isApplyingPromo ? "Applying..." : "Apply"}
-                  </Button>
+                  <p className="text-sm text-gray-500">
+                    Please select a shipping address
+                  </p>
                 )}
               </div>
-              {promoError && (
-                <p className="text-red-500 text-sm mt-1">{promoError}</p>
-              )}
-              {discount > 0 && (
-                <p className="text-green-600 text-sm mt-1">
-                  Promo code applied! You saved ${discount.toFixed(2)}
-                </p>
-              )}
 
-              <div className="space-y-2 border-t pt-4">
+              <div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter promo code"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    className="rounded-md"
+                  />
+                  {discount > 0 ? (
+                    <Button variant="outline" onClick={handleRemovePromo}>
+                      Remove
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleApplyPromoCode}
+                      disabled={isApplyingPromo}
+                      className="rounded-md"
+                    >
+                      {isApplyingPromo ? "Applying..." : "Apply"}
+                    </Button>
+                  )}
+                </div>
+                {promoError && (
+                  <p className="text-red-500 text-sm mt-1">{promoError}</p>
+                )}
+                {discount > 0 && (
+                  <p className="text-green-600 text-sm mt-1">
+                    Promo code applied! You saved ${discount.toFixed(2)}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-3 border-t pt-4">
                 <div className="flex justify-between text-sm">
-                  <p className="text-gray-600">Subtotal</p>
-                  <p className="font-medium">${calculateSubtotal()}</p>
+                  <span className="text-gray-600">Subtotal</span>
+                  <span className="font-medium">${calculateSubtotal()}</span>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-sm">
-                    <p className="text-gray-600">Discount</p>
-                    <p className="font-medium text-green-600">
+                    <span className="text-gray-600">Discount</span>
+                    <span className="font-medium text-green-600">
                       -${discount.toFixed(2)}
-                    </p>
+                    </span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
-                  <p className="text-gray-600">Tax (10%)</p>
-                  <p className="font-medium">
+                  <span className="text-gray-600">Tax (10%)</span>
+                  <span className="font-medium">
                     $
                     {(
                       (parseFloat(calculateSubtotal()) -
                         parseFloat(discount.toFixed(2))) *
                       tax
                     ).toFixed(2)}
-                  </p>
+                  </span>
                 </div>
                 <div className="flex justify-between text-base font-bold">
-                  <p>Total</p>
-                  <p>${calculateTotal()}</p>
+                  <span>Total</span>
+                  <span>${calculateTotal()}</span>
                 </div>
               </div>
+
               <Button
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 rounded-full"
+                className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-full"
                 onClick={handleCheckout}
-                disabled={!selectedAddressId}
+                disabled={!selectedAddressId || isLoading.placeOrder}
               >
-                Proceed to Checkout
+                {isLoading.placeOrder ? "Processing..." : "Proceed to Checkout"}
               </Button>
             </div>
           </motion.div>
