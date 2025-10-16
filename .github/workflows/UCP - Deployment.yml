@@ -26,5 +26,5 @@ jobs:
         run: |
           export DISABLE_ESLINT_PLUGIN=true
           npm run build:ucp
-          sudo rm -rf /mnt/ECOM/frontend/*
-          sudo cp -r build/* /mnt/ECOM/frontend/
+          rm -rf /mnt/ECOM/frontend/*
+          cp -r build/* /mnt/ECOM/frontend/
