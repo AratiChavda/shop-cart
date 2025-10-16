@@ -1,4 +1,4 @@
-name: MPS - Deployment
+name: UCP - Deployment
 
 on:
   push:
