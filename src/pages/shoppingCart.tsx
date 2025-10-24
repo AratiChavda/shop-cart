@@ -24,6 +24,7 @@ import {
 } from "@/api/apiServices";
 import { ADDRESS_CATEGORY } from "@/constant/common";
 import type { Address } from "@/types";
+import { useUser } from "@/hooks/useUser";
 
 interface CartItem {
   id: number;
@@ -42,11 +43,7 @@ interface CartItem {
   billingAddress: Address;
 }
 
-interface ShoppingCartProps {
-  user: { id: string; customer: { customerId: string } } | null;
-}
-
-const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
+const ShoppingCart = () => {
   const { journalBrowseURL } = useClient();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState<{
@@ -74,6 +71,7 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
   const [tax] = useState(0.1); // 10% tax rate
   const [isSticky, setIsSticky] = useState(false);
   const navigate = useNavigate();
+  const { user } = useUser();
 
   const fetchBillingAddress = useCallback(async () => {
     if (!user?.customer.customerId) return null;
@@ -239,7 +237,8 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
         );
 
         setSameAsBilling(
-          cartBillingAddressId &&
+          isValidShippingAddress &&
+            cartBillingAddressId &&
             cartShippingAddressId &&
             cartBillingAddressId === cartShippingAddressId
         );
@@ -341,8 +340,9 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
       if (!response?.success) {
         throw new Error(response?.message || "Failed to place order");
       }
+      const orderIds = response?.orderId || [];
       toast.success("Order placed successfully");
-      navigate("/dashboard/checkout");
+      navigate("/dashboard/checkout", { state: { orderIds } });
     } catch (error: any) {
       toast.error(error?.message || "Failed to place order");
     } finally {
@@ -406,13 +406,12 @@ const ShoppingCart: React.FC<ShoppingCartProps> = ({ user }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="container mx-auto py-6 px-4 sm:px-6 lg:px-8 min-h-screen"
     >
       {cart.length === 0 ? (
         <motion.div
           initial={{ scale: 0.95 }}
           animate={{ scale: 1 }}
-          className="text-center py-16 bg-white rounded-xl shadow-sm"
+          className="text-center py-16 bg-primary/5 ring-1 ring-primary/10 rounded-xl shadow-sm"
         >
           <h2 className="text-2xl font-semibold text-gray-800 mb-4">
             Your Cart is Empty

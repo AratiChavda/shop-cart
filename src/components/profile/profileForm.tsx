@@ -20,24 +20,30 @@ import {
 } from "@/components/ui/tooltip";
 import { HelpCircleIcon, UserIcon } from "lucide-react";
 import { toast } from "sonner";
+import { useUser } from "@/hooks/useUser";
+import { formatDate } from "@/utils/common";
 
 const profileSchema = z.object({
-  customerId: z.string(),
-  name: z.string().min(1, "Name is required"),
-  companyName: z.string().optional(),
+  customerId: z.string().optional(),
+  fname: z.string().min(1, "First name is required"),
+  lname: z.string().min(1, "Last name is required"),
+  company: z.string().optional(),
   email: z.string().email("Please enter a valid email"),
   phone: z.string().optional(),
 });
 
 export const ProfileForm = () => {
+  const { user } = useUser();
+
   const profileForm = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      customerId: "CUST-12345",
-      name: "John Doe",
-      companyName: "Acme Inc",
-      email: "john@acme.com",
-      phone: "+1 (555) 123-4567",
+      customerId: user?.customer.customerId?.toString() || "",
+      fname: user?.customer.fname || "",
+      lname: user?.customer.lname || "",
+      company: user?.customer.company || "",
+      email: user?.customer.email || "",
+      phone: user?.customer.mobileNumber || "",
     },
   });
 
@@ -55,7 +61,8 @@ export const ProfileForm = () => {
             <span>Profile Information</span>
           </CardTitle>
           <Badge variant="outline" className="px-3 py-1">
-            Member since Jan 2023
+            Member since{" "}
+            {formatDate(user?.customer?.createdAt || undefined, "MMM yyyy")}
           </Badge>
         </div>
       </CardHeader>
@@ -91,10 +98,10 @@ export const ProfileForm = () => {
               />
               <FormField
                 control={profileForm.control}
-                name="name"
+                name="fname"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Name</FormLabel>
+                    <FormLabel>First Name</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -104,7 +111,20 @@ export const ProfileForm = () => {
               />
               <FormField
                 control={profileForm.control}
-                name="companyName"
+                name="lname"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={profileForm.control}
+                name="company"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Company Name</FormLabel>

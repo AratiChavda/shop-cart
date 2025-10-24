@@ -6,6 +6,8 @@ export const clients: Record<ClientName, Client> = {
     variables: {
       "--primary": "oklch(0.4855 0.199154 29.1141)",
       "--primary-foreground": "oklch(1 0 0)",
+      "--sidebar-accent": "oklch(0.4855 0.199154 29.1141 / 30%)",
+      "--sidebar-accent-foreground": "oklch(0.4855 0.199154 29.1141 / 80%)",
     },
     logo: "https://unp-think.highwire.org/images/UNP_logo_color_home.png",
     journalBrowseURL: "https://nebraskapressjournals.unl.edu/",
@@ -16,6 +18,8 @@ export const clients: Record<ClientName, Client> = {
     variables: {
       "--primary": "oklch(0.4216 0.1536 15.6869)",
       "--primary-foreground": "oklch(1 0 0)",
+      "--sidebar-accent": "oklch(0.4216 0.1536 15.6869 / 30%)",
+      "--sidebar-accent-foreground": "oklch(0.4216 0.1536 15.6869 / 80%)",
     },
     logo: "https://upload.wikimedia.org/wikipedia/commons/5/55/News_Corp_logo_2013.svg",
     journalBrowseURL: "https://nebraskapressjournals.unl.edu/",
@@ -36,8 +40,11 @@ export const clients: Record<ClientName, Client> = {
     variables: {
       "--primary": "oklch(0.5882 0.1619 42.87)",
       "--primary-foreground": "oklch(1 0 0)",
+      "--sidebar-accent": "oklch(0.5882 0.1619 42.87 / 10%)",
+      "--sidebar-accent-foreground": "oklch(0.5882 0.1619 42.87 / 80%)",
     },
-    logo: "https://dhjhkxawhe8q4.cloudfront.net/texas-uni-wp/wp-content/uploads/2025/02/18195056/cropped-cropped-UTP75-Logo_Homepage-bigger.png",
+    // logo: "https://dhjhkxawhe8q4.cloudfront.net/texas-uni-wp/wp-content/uploads/2025/02/18195056/cropped-cropped-UTP75-Logo_Homepage-bigger.png",
+    logo: "https://thinkprototype.mpstechnologies.com/assets/images/highwirepress-logo.svg",
     journalBrowseURL: "https://utpress.utexas.edu/journals",
     showPromoCode: false,
   },
@@ -46,6 +53,8 @@ export const clients: Record<ClientName, Client> = {
     variables: {
       "--primary": "oklch(0.4216 0.1536 15.6869)",
       "--primary-foreground": "oklch(1 0 0)",
+      "--sidebar-accent": "oklch(0.4216 0.1536 15.6869 / 30%)",
+      "--sidebar-accent-foreground": "oklch(0.4216 0.1536 15.6869 / 80%)",
     },
     logo: "https://thinkprototype.mpstechnologies.com/assets/images/highwirepress-logo.svg",
     journalBrowseURL: "https://online.ucpress.edu/journals",
@@ -56,6 +65,8 @@ export const clients: Record<ClientName, Client> = {
     variables: {
       "--primary": "oklch(0% 0 0)",
       "--primary-foreground": "oklch(1 0 0)",
+      "--sidebar-accent": "oklch(0% 0 0 / 30%)",
+      "--sidebar-accent-foreground": "oklch(0% 0 0 / 80%)",
     },
     logo: "https://thinkprototype.mpstechnologies.com/assets/images/HER_logo.svg",
     journalBrowseURL: "https://online.ucpress.edu/journals",
@@ -66,6 +77,8 @@ export const clients: Record<ClientName, Client> = {
     variables: {
       "--primary": "oklch(69.39% 0.158 258.73)",
       "--primary-foreground": "oklch(1 0 0)",
+      "--sidebar-accent": "oklch(69.39% 0.158 258.73 / 30%)",
+      "--sidebar-accent-foreground": "oklch(69.39% 0.158 258.73 / 80%)",
     },
     logo: "https://thinkprototype.mpstechnologies.com/assets/images/CFP_logo.png",
     journalBrowseURL: "https://online.ucpress.edu/journals",

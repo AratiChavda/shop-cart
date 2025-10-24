@@ -25,7 +25,7 @@ import { useUser } from "@/hooks/useUser";
 import { ADDRESS_CATEGORY } from "@/constant/common";
 import { toast } from "sonner";
 import { fetchAllCountries, fetchEntityData } from "@/api/apiServices";
-import type { AddressStatus, Country } from "@/types";
+import { type Address, type AddressStatus, type Country } from "@/types";
 
 function ProfilePage() {
   const [countries, setCountries] = useState<Country[]>([]);
@@ -35,7 +35,7 @@ function ProfilePage() {
     addressStatus: false,
   });
   const [activeTab, setActiveTab] = useState("profile");
-  const [billingAddress, setBillingAddress] = useState(null);
+  const [billingAddress, setBillingAddress] = useState<Address | null>(null);
   const params = useParams();
   const { isAdmin, user } = useUser();
 
@@ -131,7 +131,7 @@ function ProfilePage() {
   return isAdmin && !params?.id ? (
     <></>
   ) : (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+    <div className="w-full">
       <div className="flex flex-col md:flex-row gap-6">
         <aside className="w-full md:w-80 flex-shrink-0">
           <Card className="overflow-hidden pt-0 border-0 shadow-lg bg-white/95 backdrop-blur-md rounded-2xl transition-all hover:shadow-xl">
@@ -199,7 +199,16 @@ function ProfilePage() {
                   {[
                     { icon: Mail, text: user?.customer?.email },
                     { icon: Phone, text: user?.customer?.mobileNumber },
-                    { icon: Globe, text: "San Francisco, CA" },
+                    {
+                      icon: Globe,
+                      text: `${
+                        (billingAddress?.city || "") +
+                        ", " +
+                        (billingAddress?.state || "") +
+                        ", " +
+                        (billingAddress?.countryCode || "")
+                      }`,
+                    },
                   ].map((item, index) => (
                     <div key={index} className="flex items-center">
                       <item.icon className="h-4 w-4 mr-3 text-primary" />

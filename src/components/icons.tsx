@@ -17,6 +17,11 @@ import {
   Menu,
   ShoppingCart,
   LogOut,
+  Globe,
+  Bell,
+  ChevronDown,
+  Settings,
+  ChevronLeft,
 } from "lucide-react";
 
 const dashboard = LayoutDashboardIcon;
@@ -37,6 +42,11 @@ const x = X;
 const menu = Menu;
 const cart = ShoppingCart;
 const logout = LogOut;
+const globe = Globe;
+const bell = Bell;
+const chevronDown = ChevronDown;
+const settings = Settings;
+const chevronLeft=ChevronLeft
 
 export const Icons = {
   dashboard,
@@ -57,4 +67,9 @@ export const Icons = {
   menu,
   cart,
   logout,
+  globe,
+  bell,
+  chevronDown,
+  settings,
+  chevronLeft
 };

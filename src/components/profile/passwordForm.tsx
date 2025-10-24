@@ -14,6 +14,7 @@ import { Input, PasswordInput } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LockIcon } from "lucide-react";
 import { toast } from "sonner";
+import { useUser } from "@/hooks/useUser";
 
 const passwordSchema = z
   .object({
@@ -31,11 +32,12 @@ const passwordSchema = z
   });
 
 export const PasswordForm = () => {
+  const { user } = useUser();
   const passwordForm = useForm<z.infer<typeof passwordSchema>>({
     resolver: zodResolver(passwordSchema),
     defaultValues: {
-      customerId: "CUST-12345",
-      email: "john@acme.com",
+      customerId: user?.customer.customerId?.toString() || "",
+      email: user?.customer.email || "",
       oldPassword: "",
       newPassword: "",
       confirmPassword: "",

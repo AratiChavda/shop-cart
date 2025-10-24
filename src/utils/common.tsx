@@ -2,7 +2,10 @@ import { ORDER_STATUS, PAYMENT_STATUS } from "@/constant/common";
 import type { Address } from "@/types";
 import { format } from "date-fns";
 
-export function formatDate(date: number, dateFormat?: "mm/dd/yyyy") {
+export function formatDate(
+  date: number | undefined,
+  dateFormat?: "mm/dd/yyyy" | "MMM yyyy"
+) {
   if (!date) return "";
 
   const dateOnly = new Date(Number(date));
