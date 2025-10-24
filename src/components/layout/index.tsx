@@ -9,9 +9,9 @@ const Layout = () => {
   const path = useLocation().pathname;
   return path?.includes("/dashboard") ? (
     isAdmin ? (
-      <UserDashboardLayout />
-    ) : (
       <DashboardLayout />
+    ) : (
+      <UserDashboardLayout />
     )
   ) : (
     <PublicLayout />
