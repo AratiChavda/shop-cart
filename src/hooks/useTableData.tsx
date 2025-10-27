@@ -14,6 +14,9 @@ export function useTableData<T>({
   data,
   initialPageSize = 10,
 }: UseTableDataParams<T>) {
+  const [isServerSideRendering, setIsServerSideRendering] = useState(true);
+  const [totalElements, setTotalElements] = useState(0);
+  const [isDataLoading, setIsDataLoading] = useState(false);
   const [globalFilter, setGlobalFilter] = useState("");
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>(
     {}
@@ -23,6 +26,7 @@ export function useTableData<T>({
   const [pageSize, setPageSize] = useState(initialPageSize);
 
   const filteredData = useMemo(() => {
+    if (isServerSideRendering) return data;
     let filtered = data;
 
     if (globalFilter) {
@@ -44,9 +48,10 @@ export function useTableData<T>({
     });
 
     return filtered;
-  }, [data, globalFilter, columnFilters]);
+  }, [isServerSideRendering, data, globalFilter, columnFilters]);
 
   const sortedData = useMemo(() => {
+    if (isServerSideRendering) return data;
     if (!sorting.length) return filteredData;
 
     const [{ id, desc }] = sorting;
@@ -57,14 +62,17 @@ export function useTableData<T>({
       if (aValue > bValue) return desc ? -1 : 1;
       return 0;
     });
-  }, [filteredData, sorting]);
+  }, [data, filteredData, isServerSideRendering, sorting]);
 
   const paginatedData = useMemo(() => {
+    if (isServerSideRendering) return data;
     const start = page * pageSize;
     return sortedData.slice(start, start + pageSize);
-  }, [sortedData, page, pageSize]);
+  }, [isServerSideRendering, data, page, pageSize, sortedData]);
 
-  const pageCount = Math.ceil(filteredData.length / pageSize);
+  const pageCount = isServerSideRendering
+    ? Math.ceil(totalElements / pageSize)
+    : Math.ceil(filteredData.length / pageSize);
 
   useEffect(() => {
     setPage(0);
@@ -83,5 +91,9 @@ export function useTableData<T>({
     setGlobalFilter,
     columnFilters,
     setColumnFilters,
+    isDataLoading,
+    setIsDataLoading,
+    setIsServerSideRendering,
+    setTotalElements,
   };
 }

@@ -4,7 +4,7 @@ import DataTable from "@/components/table/dataTable";
 import { DataTablePagination } from "@/components/table/dataTablePagination";
 import { useTableData } from "@/hooks/useTableData";
 import { Package, User } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Icons } from "@/components/icons";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -16,72 +16,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { KeyValuePair } from "@/components/ui/keyValuePair";
 import { useNavigate } from "react-router-dom";
+import { fetchEntityData } from "@/api/apiServices";
+import { toast } from "sonner";
+import { type Customer } from "@/types";
 
 const CustomerPage = () => {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
-  const [customers] = useState([
-    {
-      customer_id: "CUST001",
-      email: "john.doe@example.com",
-      fname: "John",
-      lastName: "Doe",
-    },
-    {
-      customer_id: "CUST002",
-      email: "jane.smith@example.com",
-      fname: "Jane",
-      lastName: "Smith",
-    },
-    {
-      customer_id: "CUST003",
-      email: "michael.brown@example.com",
-      fname: "Michael",
-      lastName: "Brown",
-    },
-    {
-      customer_id: "CUST004",
-      email: "emily.jones@example.com",
-      fname: "Emily",
-      lastName: "Jones",
-    },
-    {
-      customer_id: "CUST005",
-      email: "david.wilson@example.com",
-      fname: "David",
-      lastName: "Wilson",
-    },
-    {
-      customer_id: "CUST006",
-      email: "lisa.taylor@example.com",
-      fname: "Lisa",
-      lastName: "Taylor",
-    },
-    {
-      customer_id: "CUST007",
-      email: "robert.anderson@example.com",
-      fname: "Robert",
-      lastName: "Anderson",
-    },
-    {
-      customer_id: "CUST008",
-      email: "susan.moore@example.com",
-      fname: "Susan",
-      lastName: "Moore",
-    },
-    {
-      customer_id: "CUST009",
-      email: "kevin.jackson@example.com",
-      fname: "Kevin",
-      lastName: "Jackson",
-    },
-    {
-      customer_id: "CUST010",
-      email: "nancy.martin@example.com",
-      fname: "Nancy",
-      lastName: "Martin",
-    },
-  ]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
   const {
     paginatedData,
@@ -94,10 +36,53 @@ const CustomerPage = () => {
     setSorting,
     columnFilters,
     setColumnFilters,
+    // isDataLoading,
+    setIsDataLoading,
+    setTotalElements,
+    setIsServerSideRendering,
   } = useTableData({
     data: customers,
     initialPageSize: 15,
   });
+  console.log(columnFilters);
+  const fetchCustomer = useCallback(async () => {
+    setIsDataLoading(true);
+
+    try {
+      const payload = {
+        class: "CustomerDetails",
+        fields: [
+          "customerId",
+          "email",
+          "fname",
+          "lname",
+          "createdAt",
+          "initialName",
+        ].join(","),
+      };
+
+      const response = await fetchEntityData(payload, {
+        page,
+        size: pageSize,
+        sort:
+          sorting && sorting?.length
+            ? `${sorting?.[0]?.id},${sorting?.[0]?.desc ? "desc" : "asc"}`
+            : "createdAt,desc",
+      });
+      setCustomers(response.content || []);
+      setTotalElements(response.totalElements || 0);
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Failed to fetch customers");
+    } finally {
+      setIsDataLoading(false);
+    }
+  }, [page, sorting, pageSize, setIsDataLoading, setTotalElements]);
+
+  useEffect(() => {
+    fetchCustomer();
+    setIsServerSideRendering(true);
+  }, [fetchCustomer, setIsServerSideRendering]);
 
   return (
     <div className="w-full p-4">
@@ -133,10 +118,10 @@ const CustomerPage = () => {
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-4">
         {[
-          { title: "Customer ID", key: "customer_id" },
+          { title: "Customer ID", key: "customerId" },
           { title: "Email", key: "email" },
           { title: "First Name", key: "fname" },
-          { title: "Last Name" },
+          { title: "Last Name", key: "lname" },
         ]?.map((eachValue: any) => {
           return (
             <div
@@ -151,7 +136,7 @@ const CustomerPage = () => {
                 onChange={(e: any) =>
                   setColumnFilters({
                     ...columnFilters,
-                    [eachValue.id]: e.target.value,
+                    [eachValue.key]: e.target.value,
                   })
                 }
               />
@@ -166,7 +151,7 @@ const CustomerPage = () => {
           columns={[
             {
               header: "Customer ID",
-              accessorKey: "customer_id",
+              accessorKey: "customerId",
             },
             {
               header: "Email",
@@ -178,18 +163,22 @@ const CustomerPage = () => {
             },
             {
               header: "Last Name",
-              accessorKey: "lastName",
+              accessorKey: "lname",
             },
             {
               header: "Actions",
               accessorKey: "actions",
               enableSorting: false,
-              cell: () => (
+              cell: ({ row }: { row: { original: any } }) => (
                 <div className="flex items-center w-full">
                   <Button
                     variant="link"
                     className="cursor-pointer"
-                    onClick={() => navigate("/dashboard/orders")}
+                    onClick={() =>
+                      navigate(
+                        `/dashboard/orders?customerId=${row?.original?.customerId}`
+                      )
+                    }
                   >
                     <Package className="h-4 w-4" />
                     View Order Details
@@ -197,7 +186,11 @@ const CustomerPage = () => {
                   <Button
                     variant="link"
                     className="cursor-pointer"
-                    onClick={() => navigate("/dashboard/viewUserProfile/1")}
+                    onClick={() =>
+                      navigate(
+                        `/dashboard/viewUserProfile/${row?.original?.customerId}`
+                      )
+                    }
                   >
                     <User className="h-4 w-4" />
                     Customer Profile
@@ -206,6 +199,7 @@ const CustomerPage = () => {
               ),
             },
           ]}
+          serverSideSorting={true}
           sorting={sorting}
           onSortingChange={setSorting}
         ></DataTable>
@@ -232,11 +226,11 @@ const CustomerPage = () => {
                       <div className="space-y-1 flex-1">
                         <KeyValuePair
                           label="Customer ID"
-                          value={item.customer_id}
+                          value={item.customerId}
                         />
                         <KeyValuePair
                           label="Name"
-                          value={`${item.fname} ${item.lastName}`}
+                          value={`${item.fname} ${item.lname}`}
                         />
                         <KeyValuePair label="Email" value={item.email} />
                       </div>

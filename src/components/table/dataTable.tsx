@@ -21,6 +21,7 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   className?: string;
+  serverSideSorting?: boolean;
   sorting?: { id: string; desc: boolean }[];
   onSortingChange?: (newSorting: { id: string; desc: boolean }[]) => void;
 }
@@ -28,6 +29,7 @@ export default function DataTable<TData, TValue>({
   columns,
   data,
   className = "",
+  serverSideSorting,
   sorting,
   onSortingChange,
 }: DataTableProps<TData, TValue>) {
@@ -50,6 +52,7 @@ export default function DataTable<TData, TValue>({
     state: {
       sorting,
     },
+    manualSorting: serverSideSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
