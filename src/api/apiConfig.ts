@@ -31,6 +31,9 @@ const API_ENDPOINTS = {
   order: {
     place: `${API_BASE_URL}/v1/place/orders`,
   },
+  payment: {
+    pay: `${API_BASE_URL}/v1/payment/pay`,
+  },
   entityData: `${API_BASE_URL}/v1/data/fetch`,
   location: {
     countries:

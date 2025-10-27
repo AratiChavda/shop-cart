@@ -264,7 +264,20 @@ export const setCartAddress = async (payload: any) => {
 
 export const placeOrder = async () => {
   try {
-    const response = await api.post(API_ENDPOINTS.order.place,{});
+    const response = await api.post(API_ENDPOINTS.order.place, {});
+    if (response.data?.success) {
+      return response?.data;
+    }
+    throw response?.data;
+  } catch (error: any) {
+    console.error(error);
+    throw error;
+  }
+};
+
+export const payOrder = async (payload: any) => {
+  try {
+    const response = await api.post(API_ENDPOINTS.payment.pay, payload);
     if (response.data?.success) {
       return response?.data;
     }

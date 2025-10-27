@@ -22,6 +22,7 @@ import PrivacyStatement from "./components/clients/UCP/privacyStatement";
 import JournalConfigPage from "./pages/journalConfigPage";
 import OcMappingPage from "./pages/ocMappingPage";
 import { useUser } from "./hooks/useUser";
+import Error404 from "./components/layout/Error404";
 
 function App() {
   const { isAuthenticated, bootstrapped } = useAuth();
@@ -87,6 +88,7 @@ function App() {
           <Route path="privacyStatement" element={<PrivacyStatement />} />
         </>
       )}
+      <Route path="*" element={<Error404 />} />
     </Routes>
   );
 }

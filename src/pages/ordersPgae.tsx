@@ -17,6 +17,7 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronUp,
+  Wallet,
 } from "lucide-react";
 import { fetchEntityData } from "@/api/apiServices";
 import { useUser } from "@/hooks/useUser";
@@ -27,6 +28,7 @@ import {
   getPaymentVariant,
   getStatusVariant,
 } from "@/utils/common";
+import { useNavigate } from "react-router-dom";
 
 interface Order {
   id: string;
@@ -52,6 +54,7 @@ const OrderTimeline: React.FC<{
   const [openOrder, setOpenOrder] = useState<string | null>(null);
   const ref = React.useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { amount: 0 });
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (inView && hasMore && !loadingMore) {
@@ -59,12 +62,15 @@ const OrderTimeline: React.FC<{
     }
   }, [inView, hasMore, loadingMore, loadMore]);
 
-  const getStatusActions = (status: Order["orderStatus"]) => {
+  const getStatusActions = (status: Order["orderStatus"], orderId: string) => {
     const actions = [
       {
-        label: "Track Order",
-        icon: <Truck className="h-4 w-4" />,
+        label: "Make Payment",
+        icon: <Wallet className="h-4 w-4" />,
         statuses: [ORDER_STATUS.ORDER_PLACED],
+        onClick: () => {
+          navigate("/dashboard/checkout", { state: { orderIds: [orderId] } });
+        },
       },
       {
         label: "Cancel Order",
@@ -102,16 +108,16 @@ const OrderTimeline: React.FC<{
   };
 
   return (
-    <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="relative">
       <motion.div
         initial={{ height: 0 }}
         animate={{ height: "100%" }}
         transition={{ duration: 1.5, ease: "easeInOut" }}
         className="absolute left-1/2 transform -translate-x-1/2 h-full w-1.5 bg-gradient-to-b from-primary to-primary/20"
       />
-      {orders.map((order, index) => {
+      {orders.map((order: any, index) => {
         const isLeft = index % 2 === 0;
-        const actions = getStatusActions(order.orderStatus);
+        const actions = getStatusActions(order.orderStatus, order.id);
         const isOpen = openOrder === order.id;
 
         return (
@@ -203,6 +209,7 @@ const OrderTimeline: React.FC<{
                               variant="outline"
                               size="sm"
                               className="text-primary hover:bg-primary/20 border-primary/30"
+                              onClick={action?.onClick}
                             >
                               {action.icon}
                               <span className="ml-2">{action.label}</span>
