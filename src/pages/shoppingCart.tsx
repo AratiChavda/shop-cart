@@ -340,7 +340,7 @@ const ShoppingCart = () => {
       if (!response?.success) {
         throw new Error(response?.message || "Failed to place order");
       }
-      const orderIds = response?.orderId || [];
+      const orderIds = response?.data?.orderId || [];
       toast.success("Order placed successfully");
       navigate("/dashboard/checkout", { state: { orderIds } });
     } catch (error: any) {
