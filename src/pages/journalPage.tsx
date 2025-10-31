@@ -64,7 +64,6 @@ interface JournalPageProps {
 }
 
 const JournalPage: React.FC<JournalPageProps> = ({ user }) => {
-  const { clientName } = useClient();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [data, setData] = useState<any[]>([]);
