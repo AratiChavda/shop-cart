@@ -229,6 +229,11 @@ const ShoppingCart = () => {
     }
   }, [fetchBillingAddress, fetchShippingAddresses, fetchCart, user]);
 
+  const refreshCart = useCallback(async () => {
+    const r = await fetchCart();
+    setCart(r?.cartItems ?? []);
+  }, [fetchCart]);
+
   const saveAddresses = useCallback(
     async (newId: number | undefined) => {
       if (!billingAddress || !newId) return;
@@ -238,12 +243,13 @@ const ShoppingCart = () => {
           billingAddressId: billingAddress.addressId,
         };
         const res = await setCartAddress(payload);
+        refreshCart();
         toast.success(res?.success ? "Addresses saved" : "Failed to save");
       } catch (e: any) {
         toast.error(e?.message ?? "Failed to save addresses");
       }
     },
-    [billingAddress]
+    [billingAddress, refreshCart]
   );
 
   useEffect(() => {
@@ -315,11 +321,6 @@ const ShoppingCart = () => {
     const sub = parseFloat(calculateSubtotal());
     const disc = parseFloat(discount.toFixed(2));
     return ((sub - disc) * (1 + tax)).toFixed(2);
-  };
-
-  const refreshCart = async () => {
-    const r = await fetchCart();
-    setCart(r?.cartItems ?? []);
   };
 
   const handleQuantityChange = async (id: number, qty: number) => {

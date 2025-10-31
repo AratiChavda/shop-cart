@@ -15,7 +15,7 @@ import CustomerPage from "./pages/customerPage";
 import ClaimPage from "./pages/claimPage";
 import CancellationPage from "./pages/cancellationPage";
 import RenewalPage from "./pages/renewalPage";
-import OrdersPage from "./pages/ordersPgae";
+import OrdersPage from "./pages/ordersPage";
 import { useClient } from "./hooks/useClient";
 import PolicyPage from "./components/clients/UCP/policy";
 import PrivacyStatement from "./components/clients/UCP/privacyStatement";
