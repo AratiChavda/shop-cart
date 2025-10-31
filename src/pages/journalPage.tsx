@@ -28,7 +28,6 @@ import { fetchEntityData, fetchPricing, setCartItem } from "@/api/apiServices";
 import { JOURNAL_ITEM_TYPE, OC_ORDER_TYPE } from "@/constant/common";
 import type { Category } from "@/types";
 import { formatDate } from "@/utils/common";
-import { useClient } from "@/hooks/useClient";
 
 const journalSchema = z
   .object({
