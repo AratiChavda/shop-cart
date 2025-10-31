@@ -22,6 +22,18 @@ import {
   ChevronDown,
   Settings,
   ChevronLeft,
+  Table,
+  BookOpen,
+  Truck,
+  Wallet,
+  Hash,
+  MapPin,
+  BarChart3,
+  Eye,
+  Download,
+  RefreshCw,
+  XCircle,
+  ArrowLeft,
 } from "lucide-react";
 
 const dashboard = LayoutDashboardIcon;
@@ -46,7 +58,19 @@ const globe = Globe;
 const bell = Bell;
 const chevronDown = ChevronDown;
 const settings = Settings;
-const chevronLeft=ChevronLeft
+const chevronLeft = ChevronLeft;
+const table = Table;
+const bookOpen = BookOpen;
+const truck = Truck;
+const wallet = Wallet;
+const hash = Hash;
+const mapPin = MapPin;
+const barChart = BarChart3;
+const eye = Eye;
+const download = Download;
+const refresh = RefreshCw;
+const xCircle = XCircle;
+const arrowLeft = ArrowLeft;
 
 export const Icons = {
   dashboard,
@@ -71,5 +95,17 @@ export const Icons = {
   bell,
   chevronDown,
   settings,
-  chevronLeft
+  chevronLeft,
+  table,
+  bookOpen,
+  truck,
+  wallet,
+  hash,
+  mapPin,
+  barChart,
+  eye,
+  download,
+  refresh,
+  xCircle,
+  arrowLeft,
 };

@@ -51,7 +51,6 @@ export function Login() {
   const location = useLocation();
   const [error, setError] = useState<string | null>(null);
   const { payload, action } = location.state || {};
-
   const navigate = useNavigate();
 
   const form = useForm<LoginFormValues>({
@@ -105,41 +104,49 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-6 md:p-8"
+        className="w-full max-w-sm sm:max-w-md bg-white rounded-lg shadow-sm p-6 sm:p-8"
       >
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <motion.img
             src={logo}
             alt="Company Logo"
-            className="mx-auto h-16 mb-4"
-            initial={{ scale: 0.8 }}
+            className="mx-auto h-12 sm:h-14 mb-4"
+            initial={{ scale: 0.9 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.3 }}
           />
-          <motion.h1 className="text-3xl font-bold bg-gradient-to-r from-primary/80 to-primary bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">
             Welcome Back
-          </motion.h1>
-          <p className="mt-2 text-gray-600">Sign in to your account</p>
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">Sign in to your account</p>
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {error && (
+              <p className="text-sm text-red-500 text-center">{error}</p>
+            )}
             <FormField
               control={form.control}
               name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>User Name</FormLabel>
+                  <FormLabel className="text-sm text-gray-700">
+                    Username
+                  </FormLabel>
                   <FormControl>
-                    <Input placeholder="User Name" {...field} />
+                    <Input
+                      placeholder="Enter username"
+                      className="border-gray-300 focus:border-primary focus:ring-primary"
+                      {...field}
+                    />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-xs" />
                 </FormItem>
               )}
             />
@@ -149,86 +156,107 @@ export function Login() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel className="text-sm text-gray-700">
+                    Password
+                  </FormLabel>
                   <FormControl>
-                    <PasswordInput placeholder="••••••••" {...field} />
+                    <PasswordInput
+                      placeholder="••••••••"
+                      className="border-gray-300 focus:border-primary focus:ring-primary"
+                      {...field}
+                    />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-xs" />
                 </FormItem>
               )}
             />
 
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button type="submit" className="w-full">
+              <Button
+                type="submit"
+                className="w-full bg-primary hover:bg-primary/90 text-white rounded-md py-2"
+              >
                 Sign In
               </Button>
             </motion.div>
           </form>
         </Form>
 
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="link" className="cursor-pointer">
-                  Forgot your password or Customer ID?
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Reset Password</DialogTitle>
-                  <DialogDescription>
-                    Enter either your email or customer ID to receive a password
-                    reset link.
-                  </DialogDescription>
-                </DialogHeader>
-                <Form {...resetForm}>
-                  <form
-                    onSubmit={resetForm.handleSubmit(onResetSubmit)}
-                    className="space-y-4"
+        <div className="mt-4 text-center text-sm">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="link" className="text-primary hover:underline">
+                Forgot password or Customer ID?
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-lg">Reset Password</DialogTitle>
+                <DialogDescription className="text-sm text-gray-500">
+                  Enter your email or customer ID to receive a password reset link.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...resetForm}>
+                <form
+                  onSubmit={resetForm.handleSubmit(onResetSubmit)}
+                  className="space-y-4"
+                >
+                  <FormField
+                    control={resetForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm text-gray-700">
+                          Email
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="you@example.com"
+                            className="border-gray-300 focus:border-primary focus:ring-primary"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={resetForm.control}
+                    name="customerId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm text-gray-700">
+                          Customer ID
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Your customer ID"
+                            className="border-gray-300 focus:border-primary focus:ring-primary"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full bg-primary hover:bg-primary/90 text-white rounded-md py-2"
                   >
-                    <FormField
-                      control={resetForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input placeholder="you@example.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={resetForm.control}
-                      name="customerId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Customer ID</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Your customer ID" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="submit" className="w-full">
-                      Submit
-                    </Button>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-            <span className="mx-2">or</span>
-            <Button
-              variant="link"
-              className="cursor-pointer"
-              onClick={() => navigate("/signup")}
-            >
-              Create account
-            </Button>
-          </p>
+                    Submit
+                  </Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+          <span className="mx-2 text-gray-500">or</span>
+          <Button
+            variant="link"
+            className="text-primary hover:underline"
+            onClick={() => navigate("/signup")}
+          >
+            Create account
+          </Button>
         </div>
       </motion.div>
     </div>

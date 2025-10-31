@@ -23,7 +23,6 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { Icons } from "@/components/icons";
 import { useUser } from "@/hooks/useUser";
-import { fetchEntityData } from "@/api/apiServices";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -33,36 +32,22 @@ import {
 } from "../ui/breadcrumb";
 import { SidebarTrigger } from "../ui/sidebar";
 import { Separator } from "../ui/separator";
+import { useCart } from "@/hooks/useCart";
 
 export const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
   const { user, isAdmin } = useUser();
-  const [cartQuantity, setCartQuantity] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [language, setLanguage] = useState("en");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { cartCount, fetchCartCount } = useCart();
 
   useEffect(() => {
-    const fetchCart = async () => {
-      if (!user?.id) return;
-      try {
-        const payload = {
-          class: "ShoppingCart",
-          filters: [{ path: "user.id", operator: "equals", value: user?.id?.toString() }],
-          fields: "cartItems.id",
-        };
-        const response = await fetchEntityData(payload);
-        if (response.content?.length) {
-          setCartQuantity(response.content?.[0]?.cartItems?.length || 0);
-        }
-      } catch (error: any) {
-        console.error(error);
-      }
-    };
-    fetchCart();
-  }, [user]);
+    if (!user) return;
+    fetchCartCount();
+  }, [fetchCartCount, user]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,7 +95,7 @@ export const Header = () => {
   const breadcrumbs = generateBreadcrumbs(location.pathname);
 
   return (
-    <header className="sticky top-0 z-50 flex h-12 items-center justify-between bg-white rounded-t-lg px-4 lg:px-6 border-b border-primary/10">
+    <header className="sticky top-0 z-50 flex h-12 items-center justify-between backdrop-blur-lg rounded-t-lg px-4 lg:px-6 border-b border-primary/10">
       <div className="flex items-center gap-2">
         <SidebarTrigger className="p-1.5 rounded-md hover:bg-primary/10" />
         <Separator orientation="vertical" className="h-5 bg-gray-200" />
@@ -118,7 +103,10 @@ export const Header = () => {
           <BreadcrumbList className="text-xs text-gray-500">
             {breadcrumbs.map((item, index) => (
               <BreadcrumbItem key={item.url}>
-                <BreadcrumbLink href={item.url} className="hover:text-primary font-medium">
+                <BreadcrumbLink
+                  href={item.url}
+                  className="hover:text-primary font-medium"
+                >
                   {item.title}
                 </BreadcrumbLink>
                 {index < breadcrumbs.length - 1 && <BreadcrumbSeparator />}
@@ -187,9 +175,9 @@ export const Header = () => {
             aria-label="Shopping Cart"
           >
             <Icons.cart className="h-4 w-4 text-gray-600" />
-            {cartQuantity > 0 && (
+            {cartCount > 0 && (
               <Badge className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center rounded-full bg-primary text-white text-[10px]">
-                {cartQuantity}
+                {cartCount}
               </Badge>
             )}
           </Button>
@@ -200,13 +188,19 @@ export const Header = () => {
             <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
               <Avatar className="h-7 w-7 border border-primary/20 hover:border-primary cursor-pointer">
                 <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
-                  {user?.username?.split(" ").map((word: string) => word[0].toUpperCase()).slice(0, 2).join("")}
+                  {user?.username
+                    ?.split(" ")
+                    .map((word: string) => word[0].toUpperCase())
+                    .slice(0, 2)
+                    .join("")}
                 </AvatarFallback>
               </Avatar>
             </motion.div>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-48 mt-1 rounded-md border-gray-200 bg-white">
-            <DropdownMenuLabel className="text-sm text-gray-800">{user?.username}</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-sm text-gray-800">
+              {user?.username}
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
             {!isAdmin && (
               <DropdownMenuItem

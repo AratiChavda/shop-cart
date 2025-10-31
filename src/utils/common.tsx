@@ -4,7 +4,7 @@ import { format } from "date-fns";
 
 export function formatDate(
   date: number | undefined,
-  dateFormat?: "mm/dd/yyyy" | "MMM yyyy"
+  dateFormat?: "MM/dd/yyyy" | "MMM yyyy"
 ) {
   if (!date) return "";
 
@@ -117,3 +117,10 @@ export const formatAddress = (address: Address) => {
     country,
   ];
 };
+
+export const formatCurrency = (amount: number, currency = "USD") =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
+  }).format(amount);

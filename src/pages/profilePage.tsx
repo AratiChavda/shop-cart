@@ -2,19 +2,18 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   CreditCard,
   Lock,
   Truck,
   User,
-  Settings,
-  Shield,
   Mail,
   Phone,
-  Globe,
   HelpCircle,
+  MapPin,
+  Check,
+  Copy,
 } from "lucide-react";
 import { ProfileForm } from "@/components/profile/profileForm";
 import { PasswordForm } from "@/components/profile/passwordForm";
@@ -26,8 +25,16 @@ import { ADDRESS_CATEGORY } from "@/constant/common";
 import { toast } from "sonner";
 import { fetchAllCountries, fetchEntityData } from "@/api/apiServices";
 import { type Address, type AddressStatus, type Country } from "@/types";
+import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-function ProfilePage() {
+const ProfilePage = () => {
+  const { isAdmin, user } = useUser();
+  const params = useParams();
   const [countries, setCountries] = useState<Country[]>([]);
   const [addressStatus, setAddressStatus] = useState<AddressStatus[]>([]);
   const [isLoading, setIsLoading] = useState({
@@ -36,8 +43,20 @@ function ProfilePage() {
   });
   const [activeTab, setActiveTab] = useState("profile");
   const [billingAddress, setBillingAddress] = useState<Address | null>(null);
-  const params = useParams();
-  const { isAdmin, user } = useUser();
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const initials = user?.username
+    ?.split(" ")
+    .map((word: string) => word[0]?.toUpperCase())
+    .slice(0, 2)
+    .join("");
+
+  const copy = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(key);
+    toast.success("Copied!");
+    setTimeout(() => setCopied(null), 1500);
+  };
 
   const fetchBillingAddresse = useCallback(async () => {
     if (!user?.customer.customerId) return;
@@ -131,186 +150,205 @@ function ProfilePage() {
   return isAdmin && !params?.id ? (
     <></>
   ) : (
-    <div className="w-full">
-      <div className="flex flex-col md:flex-row gap-6">
-        <aside className="w-full md:w-80 flex-shrink-0">
-          <Card className="overflow-hidden pt-0 border-0 shadow-lg bg-white/95 backdrop-blur-md rounded-2xl transition-all hover:shadow-xl">
-            <div className="relative h-28  bg-gradient-to-r from-primary via-primary/75 to-primary">
-              <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2">
-                <Avatar className="h-24 w-24 border-4 border-white shadow-lg ring-2 ring-primary/30">
-                  <AvatarImage src="/profile-placeholder.jpg" />
-                  <AvatarFallback className="bg-primary text-white text-2xl font-bold">
-                    {user?.username
-                      ?.split(" ")
-                      .map((word: string) => word[0].toUpperCase())
-                      .slice(0, 2)
-                      .join("")}
-                  </AvatarFallback>
-                </Avatar>
-              </div>
-            </div>
-            <CardContent className="pt-16 pb-6 text-center">
-              <h2 className="text-xl font-bold text-gray-800">
-                {user?.customer?.fname} {user?.customer?.lname}
-              </h2>
-              <p className="text-sm text-gray-500">Premium Member</p>
-              <Badge
-                variant="outline"
-                className="mt-2 bg-primary/10 text-primary/70 border-primary/30 font-medium"
+    <div className="w-full max-w-7xl mx-auto">
+      <Card
+        className={cn(
+          "relative overflow-hidden rounded-3xl border-0",
+          "bg-white dark:bg-gray-900/70",
+          "backdrop-blur-xl shadow-lg",
+          "ring-1 ring-gray-200/50 dark:ring-gray-700/50",
+          "hover:ring-primary/30 dark:hover:ring-primary/40 transition-all duration-300",
+          "group/card"
+        )}
+      >
+        <div className="pointer-events-none absolute inset-0 rounded-3xl opacity-0 group-hover/card:opacity-100 transition-opacity duration-500">
+          <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-primary/10 via-transparent to-primary/10 blur-xl" />
+        </div>
+
+        <CardContent className="p-4 sm:p-2 md:p-5">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-5 md:gap-6">
+            <div className="flex flex-col sm:flex-row items-center gap-5 md:gap-6">
+              <Avatar
+                className={cn(
+                  "h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28",
+                  "border-4 border-white dark:border-gray-800 shadow-md",
+                  "ring-2 ring-primary/20 dark:ring-primary/10",
+                  "transition-transform duration-300 group-hover/card:scale-105"
+                )}
               >
-                Verified
-              </Badge>
-            </CardContent>
-          </Card>
+                <AvatarImage src="/profile-placeholder.jpg" />
+                <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-white text-xl sm:text-2xl font-medium">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
 
-          {!isAdmin ? (
-            <>
-              <Card className="mt-6 border-0 shadow-lg bg-white/95 backdrop-blur-md rounded-2xl transition-all hover:shadow-xl">
-                <CardHeader>
-                  <CardTitle className="text-lg text-gray-800">
-                    Quick Links
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-1">
-                  {[
-                    { icon: Settings, text: "Account Settings" },
-                    { icon: CreditCard, text: "Billing & Payments" },
-                    { icon: Truck, text: "Order History" },
-                    { icon: Shield, text: "Privacy Settings" },
-                  ].map((item, index) => (
-                    <Button
-                      key={index}
-                      variant="ghost"
-                      className="w-full justify-start text-gray-700 hover:bg-primary/5 hover:text-primary transition-colors rounded-lg"
-                    >
-                      <item.icon className="h-4 w-4 mr-3 text-primary" />
-                      {item.text}
-                    </Button>
-                  ))}
-                </CardContent>
-              </Card>
-              <Card className="mt-6 border-0 shadow-lg bg-white/95 backdrop-blur-md rounded-2xl transition-all hover:shadow-xl">
-                <CardHeader>
-                  <CardTitle className="text-lg text-gray-800">
-                    Contact Info
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {[
-                    { icon: Mail, text: user?.customer?.email },
-                    { icon: Phone, text: user?.customer?.mobileNumber },
-                    {
-                      icon: Globe,
-                      text: `${
-                        (billingAddress?.city || "") +
-                        ", " +
-                        (billingAddress?.state || "") +
-                        ", " +
-                        (billingAddress?.countryCode || "")
-                      }`,
-                    },
-                  ].map((item, index) => (
-                    <div key={index} className="flex items-center">
-                      <item.icon className="h-4 w-4 mr-3 text-primary" />
-                      <span className="text-sm text-gray-600">{item.text}</span>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            </>
-          ) : (
-            <></>
-          )}
-        </aside>
-
-        <main className="flex-1 w-full">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800">
-                Account Settings
-              </h2>
-              <p className="text-sm text-gray-500">
-                Manage your profile and account preferences
-              </p>
+              <h1
+                className={cn(
+                  "text-2xl sm:text-3xl lg:text-4xl font-bold",
+                  "bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900",
+                  "bg-clip-text text-transparent",
+                  "bg-[length:200%_auto]"
+                )}
+              >
+                {user?.customer?.fname} {user?.customer?.lname}
+              </h1>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-primary/20 text-primary hover:bg-primary/15"
-            >
-              <HelpCircle className="h-4 w-4 mr-2" />
-              Help
-            </Button>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full border-primary/20 text-primary hover:bg-primary/15 transition-colors"
+                >
+                  <HelpCircle className="h-4 w-4 mr-2" />
+                  Help
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="bg-gray-800 text-white">
+                <p>Need help? Contact support</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
 
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="w-full"
-          >
-            <TabsList className="flex h-auto flex-wrap gap-2 bg-transparent p-0 border-b border-gray-200 w-full">
-              {[
-                { value: "profile", icon: User, text: "Profile" },
-                { value: "password", icon: Lock, text: "Security" },
-                ...(isAdmin
-                  ? []
-                  : [{ value: "billing", icon: CreditCard, text: "Billing" }]),
-                ...(isAdmin
-                  ? []
-                  : [{ value: "shipping", icon: Truck, text: "Shipping" }]),
-              ].map((tab) => (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className="flex items-center px-4 py-2 text-gray-600 data-[state=active]:text-primary data-[state=active]:bg-primary/5 data-[state=active]:border-b-2 data-[state=active]:border-primary/50 rounded-t-lg transition-all min-w-[100px] text-sm sm:text-base"
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[
+              {
+                Icon: Mail,
+                color: "text-blue-600 dark:text-blue-400",
+                value: user?.customer?.email || "Not provided",
+                key: "email",
+              },
+              {
+                Icon: Phone,
+                color: "text-green-600 dark:text-green-400",
+                value: user?.customer?.mobileNumber || "Not provided",
+                key: "phone",
+              },
+              {
+                Icon: MapPin,
+                color: "text-purple-600 dark:text-purple-400",
+                value:
+                  billingAddress?.city && billingAddress?.state
+                    ? `${billingAddress.city}, ${billingAddress.state}`
+                    : "Not set",
+                key: "location",
+              },
+            ].map(({ Icon, color, value, key }) => (
+              <button
+                key={key}
+                onClick={() => copy(value, key)}
+                className={cn(
+                  "group/pill flex items-center gap-3 p-3 rounded-xl",
+                  "bg-gray-50 dark:bg-gray-800/70",
+                  "border border-gray-200/50 dark:border-gray-700/50",
+                  "hover:border-primary/30 dark:hover:border-primary/40",
+                  "hover:shadow-sm transition-all duration-200"
+                )}
+              >
+                <div
+                  className={cn(
+                    "p-1.5 rounded-lg bg-white dark:bg-gray-900 shadow-sm",
+                    "group-hover/pill:shadow"
+                  )}
                 >
-                  <tab.icon className="h-4 w-4 mr-2" />
-                  <span>{tab.text}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            <div className="mt-6">
-              <TabsContent value="profile">
-                <ProfileForm />
-              </TabsContent>
+                  <Icon className={cn("h-4 w-4", color)} />
+                </div>
 
-              <TabsContent value="password">
-                <PasswordForm />
-              </TabsContent>
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+                  {value}
+                </span>
 
-              <TabsContent value="billing">
-                <Card className="border-0 shadow-sm bg-white/90 backdrop-blur-sm">
-                  <CardHeader className="border-b">
-                    <CardTitle className="flex items-center">
-                      <CreditCard className="h-5 w-5 mr-2 text-primary" />
-                      Billing Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <AddressForm
-                      address={billingAddress}
-                      addressCategory={ADDRESS_CATEGORY.BILLING}
-                      countries={countries}
-                      addressStatus={addressStatus}
-                      isLoading={isLoading}
-                      handleCancel={onBillingSubmit}
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                <div className="ml-auto">
+                  {copied === key ? (
+                    <Check className="h-4 w-4 text-emerald-500" />
+                  ) : (
+                    <Copy className="h-4 w-4 text-gray-400 group-hover/pill:text-primary transition-colors" />
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-              <TabsContent value="shipping">
-                <ShippingAddress
-                  countries={countries}
-                  addressStatus={addressStatus}
-                  isLoading={isLoading}
-                />
-              </TabsContent>
-            </div>
-          </Tabs>
-        </main>
+      <div className="w-full mt-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="flex h-auto flex-wrap gap-2 bg-transparent shadow-primary shadow-inner p-0 border-b border-gray-200 w-full">
+            {[
+              { value: "profile", icon: User, text: "Profile" },
+              { value: "password", icon: Lock, text: "Security" },
+              ...(isAdmin
+                ? []
+                : [{ value: "billing", icon: CreditCard, text: "Billing" }]),
+              ...(isAdmin
+                ? []
+                : [{ value: "shipping", icon: Truck, text: "Shipping" }]),
+            ].map((tab) => (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className="flex items-center px-4 py-2 text-gray-600 data-[state=active]:text-primary data-[state=active]:bg-primary/5 data-[state=active]:border-b-2 data-[state=active]:border-primary/50 rounded-t-lg transition-all min-w-[100px] text-sm sm:text-base"
+              >
+                <tab.icon className="h-4 w-4 mr-2" />
+                <span>{tab.text}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          <div className="mt-8">
+            <TabsContent
+              value="profile"
+              className="animate-in fade-in duration-300"
+            >
+              <ProfileForm />
+            </TabsContent>
+
+            <TabsContent
+              value="password"
+              className="animate-in fade-in duration-300"
+            >
+              <PasswordForm />
+            </TabsContent>
+
+            <TabsContent
+              value="billing"
+              className="animate-in fade-in duration-300"
+            >
+              <Card className="border-0 shadow-sm bg-white backdrop-blur-sm rounded-2xl">
+                <CardHeader className="border-b border-gray-100">
+                  <CardTitle className="flex items-center text-xl">
+                    <CreditCard className="h-5 w-5 mr-2 text-primary" />
+                    Billing Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <AddressForm
+                    address={billingAddress}
+                    addressCategory={ADDRESS_CATEGORY.BILLING}
+                    countries={countries}
+                    addressStatus={addressStatus}
+                    isLoading={isLoading}
+                    handleCancel={onBillingSubmit}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent
+              value="shipping"
+              className="animate-in fade-in duration-300"
+            >
+              <ShippingAddress
+                countries={countries}
+                addressStatus={addressStatus}
+                isLoading={isLoading}
+              />
+            </TabsContent>
+          </div>
+        </Tabs>
       </div>
     </div>
   );
-}
+};
+
 export default ProfilePage;

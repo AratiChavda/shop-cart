@@ -10,7 +10,7 @@ const UserDashboardLayout = () => {
       <div className="flex min-h-screen w-full flex-col">
         <div className="flex flex-1">
           <SidebarNav />
-          <SidebarInset className="flex-1">
+          <SidebarInset className="flex-1 bg-background">
             <Header />
             <div className="flex flex-1 flex-col">
               <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">

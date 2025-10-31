@@ -23,7 +23,7 @@ const PublicLayout = () => {
         </div>
       </header>
       <div className="flex flex-col min-h-screen pt-[64px]">
-        <main className="flex-1 bg-gray-100 overflow-y-auto">
+        <main className="flex-1 bg-background overflow-y-auto">
           <Outlet />
         </main>
       </div>

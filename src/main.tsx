@@ -23,12 +23,12 @@ createRoot(document.getElementById("root")!).render(
   <BrowserRouter>
     <StrictMode>
       <AuthProvider>
-        <CartProvider>
-          <UserProvider>
+        <UserProvider>
+          <CartProvider>
             <App />
             <Toaster />
-          </UserProvider>
-        </CartProvider>
+          </CartProvider>
+        </UserProvider>
       </AuthProvider>
     </StrictMode>
   </BrowserRouter>

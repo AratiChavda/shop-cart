@@ -1,251 +1,15 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { motion, useInView } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-  Package,
-  Truck,
-  FileText,
-  CheckCircle,
-  ChevronDown,
-  ChevronUp,
-  Wallet,
-} from "lucide-react";
+import { Package, FileText } from "lucide-react";
 import { fetchEntityData } from "@/api/apiServices";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
-import { ORDER_STATUS, PAYMENT_STATUS } from "@/constant/common";
-import {
-  formatDate,
-  getPaymentVariant,
-  getStatusVariant,
-} from "@/utils/common";
-import { useNavigate } from "react-router-dom";
-
-interface Order {
-  id: string;
-  packageName: string;
-  placedDate: string;
-  startDate: string;
-  quantity: number;
-  price: number;
-  paymentStatus: keyof typeof PAYMENT_STATUS;
-  orderStatus: keyof typeof ORDER_STATUS;
-  imageUrl: string;
-  currency: string;
-}
+import { ORDER_STATUS } from "@/constant/common";
+import { formatAddress, formatDate } from "@/utils/common";
+import OrderTimeline, { type Order } from "@/components/orderTimeline";
 
 const PAGE_SIZE = 10;
-
-const OrderTimeline: React.FC<{
-  orders: Order[];
-  hasMore: boolean;
-  loadMore: () => void;
-  loadingMore: boolean;
-}> = ({ orders, hasMore, loadMore, loadingMore }) => {
-  const [openOrder, setOpenOrder] = useState<string | null>(null);
-  const ref = React.useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { amount: 0 });
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (inView && hasMore && !loadingMore) {
-      loadMore();
-    }
-  }, [inView, hasMore, loadingMore, loadMore]);
-
-  const getStatusActions = (status: Order["orderStatus"], orderId: string) => {
-    const actions = [
-      {
-        label: "Make Payment",
-        icon: <Wallet className="h-4 w-4" />,
-        statuses: [ORDER_STATUS.ORDER_PLACED],
-        onClick: () => {
-          navigate("/dashboard/checkout", { state: { orderIds: [orderId] } });
-        },
-      },
-      {
-        label: "Cancel Order",
-        icon: <FileText className="h-4 w-4" />,
-        statuses: [ORDER_STATUS.ORDER_PLACED],
-      },
-      {
-        label: "Track Shipment",
-        icon: <Truck className="h-4 w-4" />,
-        statuses: [ORDER_STATUS.ACTIVE_SHIPPING, ORDER_STATUS.PARTIAL_SHIPMENT],
-      },
-      {
-        label: "Return Item",
-        icon: <Package className="h-4 w-4" />,
-        statuses: [ORDER_STATUS.SHIPPED_COMPLETE],
-      },
-      {
-        label: "Download Certificate",
-        icon: <CheckCircle className="h-4 w-4" />,
-        statuses: [ORDER_STATUS.SHIPPED_COMPLETE],
-      },
-      {
-        label: "View Details",
-        icon: <FileText className="h-4 w-4" />,
-        statuses: [
-          ORDER_STATUS.CANCEL_FOR_NON_PAYMENT,
-          ORDER_STATUS.CANCEL_CUSTOMER_REQUEST,
-          ORDER_STATUS.NON_VERIFY_CANCEL,
-          ORDER_STATUS.CANCEL_WAIT_AUTHORIZE,
-        ],
-      },
-    ];
-
-    return actions.filter((action) => action.statuses.includes(status));
-  };
-
-  return (
-    <div className="relative">
-      <motion.div
-        initial={{ height: 0 }}
-        animate={{ height: "100%" }}
-        transition={{ duration: 1.5, ease: "easeInOut" }}
-        className="absolute left-1/2 transform -translate-x-1/2 h-full w-1.5 bg-gradient-to-b from-primary to-primary/20"
-      />
-      {orders.map((order: any, index) => {
-        const isLeft = index % 2 === 0;
-        const actions = getStatusActions(order.orderStatus, order.id);
-        const isOpen = openOrder === order.id;
-
-        return (
-          <motion.div
-            key={order.id}
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: index * 0.15, ease: "easeOut" }}
-            className={`mb-8 flex flex-col sm:flex-row justify-between items-center w-full ${
-              isLeft ? "sm:flex-row" : "sm:flex-row-reverse"
-            }`}
-          >
-            <div
-              className={`w-full sm:w-5/12 ${isLeft ? "sm:pr-8" : "sm:pl-8"}`}
-            >
-              <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 bg-white border border-primary/10">
-                <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent">
-                  <CardTitle className="text-lg font-semibold text-primary flex justify-between items-center">
-                    {order.packageName}
-                    <Badge
-                      variant={getStatusVariant(order.orderStatus)}
-                      className="text-xs"
-                    >
-                      {order.orderStatus}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <div className="flex items-center mb-4">
-                    <motion.img
-                      src={order.imageUrl}
-                      alt={order.packageName}
-                      className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg mr-4 border border-primary/20"
-                      whileHover={{ scale: 1.05 }}
-                      transition={{ duration: 0.2 }}
-                    />
-                    <div>
-                      <p className="text-sm text-primary/80 font-medium">
-                        Order ID: {order.id}
-                      </p>
-                      <p className="text-xs text-primary/60">
-                        Placed: {order.placedDate}
-                      </p>
-                      <p className="text-xs text-primary/60">
-                        Start: {order.startDate}
-                      </p>
-                    </div>
-                  </div>
-                  <Collapsible
-                    open={isOpen}
-                    onOpenChange={() => setOpenOrder(isOpen ? null : order.id)}
-                  >
-                    <CollapsibleTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-between text-primary/80 hover:bg-primary/10"
-                      >
-                        {isOpen ? "Hide Details" : "Show Details"}
-                        {isOpen ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <Separator className="my-3" />
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <span>Quantity:</span>
-                        <span className="font-medium">{order.quantity}</span>
-                        <span>Price:</span>
-                        <span className="font-medium">
-                          {new Intl.NumberFormat("en-US", {
-                            style: "currency",
-                            currency: order.currency || "USD",
-                          }).format(order.price)}
-                        </span>
-                        <span>Payment:</span>
-                        <Badge variant={getPaymentVariant(order.paymentStatus)}>
-                          {order.paymentStatus}
-                        </Badge>
-                      </div>
-                      {actions.length > 0 && (
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          {actions.map((action, idx) => (
-                            <Button
-                              key={idx}
-                              variant="outline"
-                              size="sm"
-                              className="text-primary hover:bg-primary/20 border-primary/30"
-                              onClick={action?.onClick}
-                            >
-                              {action.icon}
-                              <span className="ml-2">{action.label}</span>
-                            </Button>
-                          ))}
-                        </div>
-                      )}
-                    </CollapsibleContent>
-                  </Collapsible>
-                </CardContent>
-              </Card>
-            </div>
-            <div className="w-full my-6 sm:my-0 sm:w-2/12 flex justify-center relative z-10">
-              <motion.div
-                className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white shadow-lg"
-                whileHover={{ scale: 1.3, rotate: 360 }}
-                whileTap={{ scale: 0.9 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Package className="h-5 w-5" />
-              </motion.div>
-            </div>
-            <div className="hidden sm:block sm:w-5/12" />
-          </motion.div>
-        );
-      })}
-      {hasMore && (
-        <div ref={ref} className="w-full h-20 flex justify-center items-center">
-          {loadingMore && (
-            <p className="text-primary/60">Loading more orders...</p>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
 
 const OrdersPage: React.FC = () => {
   const [activeOrders, setActiveOrders] = useState<Order[]>([]);
@@ -257,6 +21,9 @@ const OrdersPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [activeTab, setActiveTab] = useState("active");
+  const [journalCoverImgSrc, setJournalCoverImgSrc] = useState<
+    { ocId: number; journalCoverImgSrc: string }[]
+  >([]);
   const { user } = useUser();
 
   const fetchOrder = useCallback(
@@ -319,7 +86,20 @@ const OrdersPage: React.FC = () => {
             "orderItemsAndTerms.generatedIssue.issueDate",
             "orderItemsAndTerms.validFrom",
             "orderItemsAndTerms.numOfIssues",
+            "orderItemsAndTerms.copiesPerIssue",
+            "orderAddresses.address.addressLine1",
+            "orderAddresses.address.addressLine2",
+            "orderAddresses.address.city",
+            "orderAddresses.address.state",
+            "orderAddresses.address.countryCode",
+            "orderAddresses.address.zipCode",
+            "orderAddresses.billingAddress",
+            "orderAddresses.shippingAddress",
             "paymentBreakdown.paymentStatus",
+            "paymentBreakdown.baseAmount",
+            "paymentBreakdown.discount",
+            "paymentBreakdown.tax",
+            "paymentBreakdown.shippingCharge",
             "paymentBreakdown.netAmount",
             "paymentBreakdown.currency",
           ].join(","),
@@ -332,24 +112,77 @@ const OrdersPage: React.FC = () => {
           sort: "createdAt,desc",
         });
 
-        const newOrders = (response.content || []).map((order: any) => ({
-          id: order.orderId,
-          packageName:
-            order?.orderItemsAndTerms?.subsProdPkgDef?.description ||
-            order?.orderItemsAndTerms?.packageDef?.packageKeyInfo
-              ?.description ||
-            order?.keyOrderInformation?.orderCode?.orderCodes?.description ||
-            "Unknown Package",
-          placedDate: formatDate(order.createdAt),
-          startDate: formatDate(order?.orderItemsAndTerms?.validFrom),
-          quantity: order?.orderItemsAndTerms?.numOfIssues || 1,
-          orderStatus: order.orderStatus,
-          paymentStatus: order?.paymentBreakdown?.paymentStatus,
-          price: order?.paymentBreakdown?.netAmount || 0,
-          currency: order?.paymentBreakdown?.currency || "USD",
-          imageUrl:
-            "https://unebraskajournals-us.imgix.net/journals/0149-9408.jpg",
-        }));
+        let imgSrc = [...journalCoverImgSrc];
+        const uniqueOcIds = new Set(
+          response.content.map((order: any) => order?.orderClass?.ocId)
+        );
+        const savedOcIds = new Set(
+          journalCoverImgSrc.map((item: any) => item.ocId)
+        );
+        const missingOcIds = [...uniqueOcIds].filter(
+          (ocId) => !savedOcIds.has(ocId)
+        );
+
+        if (missingOcIds.length > 0) {
+          const imgPayload = {
+            class: "OcMapping",
+            fields: "orderClass.ocId,journalCoverImgSrc",
+            filters: [
+              {
+                path: "orderClass.ocId",
+                operator: "in",
+                value: missingOcIds.join(","),
+              },
+            ],
+          };
+          const imgRes = await fetchEntityData(imgPayload);
+          const newRecords = imgRes.content.map((item: any) => ({
+            ocId: item.orderClass.ocId,
+            journalCoverImgSrc: item.journalCoverImgSrc,
+          }));
+          imgSrc = [...journalCoverImgSrc, ...newRecords];
+          setJournalCoverImgSrc((prev) => [...prev, ...newRecords]);
+        }
+
+        const newOrders = (response.content || []).map((order: any) => {
+          const billingAddress = order?.orderAddresses?.find(
+            (address: any) => address?.billingAddress
+          )?.address;
+          const shippingAddress = order?.orderAddresses?.find(
+            (address: any) => address?.shippingAddress
+          )?.address;
+          return {
+            id: order.orderId,
+            packageName:
+              order?.orderItemsAndTerms?.subsProdPkgDef?.description ||
+              order?.orderItemsAndTerms?.packageDef?.packageKeyInfo
+                ?.description ||
+              order?.keyOrderInformation?.orderCode?.orderCodes?.description ||
+              "Premium Package",
+            placedDate: formatDate(order.createdAt),
+            startDate: formatDate(order?.orderItemsAndTerms?.validFrom),
+            quantity: order?.orderItemsAndTerms?.copiesPerIssue || 1,
+            orderStatus: order.orderStatus,
+            paymentStatus: order?.paymentBreakdown?.paymentStatus,
+            price: order?.paymentBreakdown?.netAmount || 0,
+            currency: order?.paymentBreakdown?.currency || "USD",
+            imageUrl:
+              imgSrc.find((item: any) => item.ocId === order?.orderClass?.ocId)
+                ?.journalCoverImgSrc || "/images/placeholder.jpg",
+            shippingAddress:
+              formatAddress(shippingAddress)
+                ?.filter((item: any) => item)
+                .join(", ") || "",
+            billingAddress:
+              formatAddress(billingAddress)
+                ?.filter((item: any) => item)
+                .join(", ") || "",
+            totalDiscount: order?.paymentBreakdown?.discount || 0,
+            taxAmount: order?.paymentBreakdown?.tax || 0,
+            shippingCost: order?.paymentBreakdown?.shippingCharge || 0,
+            finalAmount: order?.paymentBreakdown?.netAmount || 0,
+          };
+        });
 
         if (tab === "active") {
           setActiveOrders((prev) =>
@@ -372,7 +205,12 @@ const OrdersPage: React.FC = () => {
         setIsLoadingMore(false);
       }
     },
-    [user?.customer?.customerId, activeHasMore, historyHasMore]
+    [
+      activeHasMore,
+      historyHasMore,
+      user?.customer?.customerId,
+      journalCoverImgSrc,
+    ]
   );
 
   useEffect(() => {
@@ -384,43 +222,40 @@ const OrdersPage: React.FC = () => {
   }, [activeTab, fetchOrder, activeOrders.length, historyOrders.length]);
 
   return (
-    <div className="min-h-screen bg-white py-8 px-4 sm:px-6 lg:px-8">
-      <motion.div
-        initial={{ opacity: 0, y: -30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, ease: "easeOut" }}
-        className="text-center mb-12"
-      >
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-primary bg-clip-text bg-gradient-to-r from-primary to-primary/60">
+    <div className="max-w-4xl mx-auto">
+      <div className="text-center mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
           Your Orders
         </h1>
-        <p className="text-primary/60 mt-3 text-sm sm:text-base max-w-2xl mx-auto">
-          Explore your active orders and dive into your order history with a
-          seamless, interactive timeline.
+        <p className="text-muted-foreground mt-2 max-w-md mx-auto">
+          Track and manage all your orders in one place
         </p>
-      </motion.div>
+      </div>
+
       <Tabs
         defaultValue="active"
-        className="max-w-5xl mx-auto"
         onValueChange={setActiveTab}
+        className="w-full"
       >
-        <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-8 bg-primary/10 rounded-lg">
-          <TabsTrigger
-            value="active"
-            className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-md transition-all"
-          >
-            Active Orders
+        <TabsList className="grid w-full max-w-sm mx-auto grid-cols-2 mb-8">
+          <TabsTrigger value="active" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Active
           </TabsTrigger>
-          <TabsTrigger
-            value="history"
-            className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-md transition-all"
-          >
-            Order History
+          <TabsTrigger value="history" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            History
           </TabsTrigger>
         </TabsList>
+
         <TabsContent value="active">
           {isLoading ? (
-            <p className="text-center text-primary/60">Loading...</p>
+            <div className="flex justify-center items-center py-12">
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                Loading active orders...
+              </div>
+            </div>
           ) : activeOrders.length > 0 ? (
             <OrderTimeline
               orders={activeOrders}
@@ -429,14 +264,25 @@ const OrdersPage: React.FC = () => {
               loadingMore={isLoadingMore}
             />
           ) : (
-            <p className="text-center text-primary/60">
-              No active orders at the moment.
-            </p>
+            <div className="text-center py-12 bg-white rounded-md">
+              <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Active Orders</h3>
+              <p className="text-muted-foreground mb-6">
+                You don't have any active orders at the moment.
+              </p>
+              <Button>Start Shopping</Button>
+            </div>
           )}
         </TabsContent>
+
         <TabsContent value="history">
           {isLoading ? (
-            <p className="text-center text-primary/60">Loading...</p>
+            <div className="flex justify-center items-center py-12">
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                Loading order history...
+              </div>
+            </div>
           ) : historyOrders.length > 0 ? (
             <OrderTimeline
               orders={historyOrders}
@@ -445,9 +291,13 @@ const OrdersPage: React.FC = () => {
               loadingMore={isLoadingMore}
             />
           ) : (
-            <p className="text-center text-primary/60">
-              No order history available.
-            </p>
+            <div className="text-center py-12 bg-white rounded-md">
+              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Order History</h3>
+              <p className="text-muted-foreground">
+                Your completed orders will appear here.
+              </p>
+            </div>
           )}
         </TabsContent>
       </Tabs>

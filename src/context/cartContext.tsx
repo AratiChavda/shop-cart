@@ -1,71 +1,46 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
-
-interface CartItem {
-  jcode: string;
-  name: string;
-  issue: string;
-  description: string;
-  quantity: number;
-  price: number;
-  image: string;
-  customerCategory: "Individual" | "Institutional";
-  region: string;
-}
+import { fetchEntityData } from "@/api/apiServices";
+import { useUser } from "@/hooks/useUser";
+import { createContext, useState, type ReactNode } from "react";
 
 interface CartContextType {
-  cartItems: CartItem[];
-  totalPrice: number;
-  addToCart: (item: CartItem) => void;
-  removeFromCart: (jcode: string) => void;
-  updateCartItem: (jcode: string, updatedItem: Partial<CartItem>) => void;
-  updateTotalPrice: (price: number) => void;
+  cartCount: number;
+  fetchCartCount: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [totalPrice, setTotalPrice] = useState<number>(0);
+  const [cartCount, setCartCount] = useState(0);
+  const { user } = useUser();
 
-  const addToCart = (item: CartItem) => {
-    setCartItems((prev) => {
-      const existingItem = prev.find((i) => i.jcode === item.jcode);
-      if (existingItem) {
-        return prev.map((i) =>
-          i.jcode === item.jcode
-            ? { ...i, quantity: i.quantity + item.quantity }
-            : i
-        );
+  const fetchCartCount = async () => {
+    if (!user?.id) return;
+    try {
+      const payload = {
+        class: "ShoppingCart",
+        filters: [
+          {
+            path: "user.id",
+            operator: "equals",
+            value: user?.id?.toString(),
+          },
+        ],
+        fields: "cartItems.id",
+      };
+      const response = await fetchEntityData(payload);
+      if (response.content?.length) {
+        setCartCount(response.content?.[0]?.cartItems?.length || 0);
       }
-      return [...prev, item];
-    });
-  };
-
-  const removeFromCart = (jcode: string) => {
-    setCartItems((prev) => prev.filter((item) => item.jcode !== jcode));
-  };
-
-  const updateCartItem = (jcode: string, updatedItem: Partial<CartItem>) => {
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.jcode === jcode ? { ...item, ...updatedItem } : item
-      )
-    );
-  };
-
-  const updateTotalPrice = (price: number) => {
-    setTotalPrice(price);
+    } catch (error: any) {
+      console.error(error);
+    }
   };
 
   return (
     <CartContext.Provider
       value={{
-        cartItems,
-        totalPrice,
-        addToCart,
-        removeFromCart,
-        updateCartItem,
-        updateTotalPrice,
+        fetchCartCount,
+        cartCount,
       }}
     >
       {children}
@@ -73,10 +48,4 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const useCart = () => {
-  const context = useContext(CartContext);
-  if (!context) {
-    throw new Error("useCart must be used within a CartProvider");
-  }
-  return context;
-};
+export { CartContext };

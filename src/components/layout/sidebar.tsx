@@ -12,7 +12,15 @@ import { useNavigate } from "react-router-dom";
 import { Icons } from "../icons";
 import { Link } from "react-router-dom";
 import { useClient } from "@/hooks/useClient";
-const navItems = [
+import { useUser } from "@/hooks/useUser";
+
+interface NavItem {
+  title: string;
+  url: string;
+  icon: any;
+}
+
+const userNavItems: NavItem[] = [
   {
     title: "Dashboard",
     url: "/dashboard",
@@ -28,21 +36,40 @@ const navItems = [
     url: "/dashboard/orders",
     icon: Icons.order,
   },
-   {
+  {
     title: "Shopping Cart",
     url: "/dashboard/cart",
     icon: Icons.cart,
+  },
+];
+
+const adminNavItems: NavItem[] = [
+  {
+    title: "Dashboard",
+    url: "/dashboard",
+    icon: Icons.dashboard,
+  },
+  {
+    title: "Journal Config",
+    url: "/dashboard/journal-config",
+    icon: Icons.bookOpen,
+  },
+  {
+    title: "Order class mapping",
+    url: "/dashboard/oc-mapping",
+    icon: Icons.table,
   },
 ];
 export function SidebarNav() {
   const navigate = useNavigate();
   const pathname = window.location.pathname;
   const { logo } = useClient();
+  const { isAdmin } = useUser();
   return (
     <Sidebar
       collapsible="offcanvas"
       variant="inset"
-      className="relative bg-gray-50 transition-[width] duration-300 ease-in-out"
+      className="relative transition-[width] duration-300 ease-in-out"
     >
       <SidebarHeader>
         <div className="px-4 py-2">
@@ -66,7 +93,7 @@ export function SidebarNav() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            {navItems.map((item) => {
+            {(isAdmin ? adminNavItems : userNavItems).map((item: NavItem) => {
               const isActive = pathname === item.url;
               return (
                 <SidebarMenuItem key={item.title}>

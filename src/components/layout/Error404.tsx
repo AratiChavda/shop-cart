@@ -6,8 +6,8 @@ import {
   CardDescription,
   CardTitle,
 } from "@/components/ui/card";
-import { BookOpen, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Icons } from "../icons";
 
 const JournalIcon = () => (
   <motion.div
@@ -23,7 +23,7 @@ const JournalIcon = () => (
       ease: "easeInOut",
     }}
   >
-    <BookOpen className="w-full h-full" />
+    <Icons.bookOpen className="w-full h-full" />
   </motion.div>
 );
 
@@ -82,7 +82,7 @@ export default function Error404() {
                 className="gap-2 bg-primary hover:bg-primary/90"
                 onClick={() => navigate("/subscriptions")}
               >
-                <BookOpen className="h-4 w-4" />
+                <Icons.bookOpen className="h-4 w-4" />
                 Explore Subscriptions
               </Button>
               <Button
@@ -90,7 +90,7 @@ export default function Error404() {
                 className="gap-2"
                 onClick={() => navigate("/")}
               >
-                <ArrowLeft className="h-4 w-4" />
+                <Icons.arrowLeft className="h-4 w-4" />
                 Back to Home
               </Button>
             </motion.div>

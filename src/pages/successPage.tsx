@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { downloadInvoice } from "@/api/apiServices";
 
 const SuccessPage = () => {
   const navigate = useNavigate();
@@ -16,7 +17,12 @@ const SuccessPage = () => {
     if (!orderIds?.length) {
       navigate("/");
     }
-  },[orderIds, navigate]);
+  }, [orderIds, navigate]);
+
+  const handleDownloadInvoice = async () => {
+    if (!orderIds?.[0]) return;
+    await downloadInvoice([orderIds?.[0]]);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
@@ -62,7 +68,11 @@ const SuccessPage = () => {
               <Button className="w-full" onClick={() => navigate("/dashboard")}>
                 Go to Dashboard
               </Button>
-              <Button variant="outline" className="w-full">
+              <Button
+                variant="outline"
+                onClick={handleDownloadInvoice}
+                className="w-full"
+              >
                 Download Invoice
               </Button>
             </div>

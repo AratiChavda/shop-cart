@@ -59,13 +59,14 @@ export const fetchUserDetails = async (payload: any) => {
 
 export const fetchAllCountries = async () => {
   try {
-    const response = await api.get(API_ENDPOINTS.location.countries, {
-      skipAuth: true,
-    } as CustomInternalAxiosRequestConfig);
-    if (response.data?.length) {
-      return response?.data;
+    const response = await fetch("/assets/json/countries.json");
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
     }
-    throw response?.data;
+
+    const data = await response.json();
+    return data;
   } catch (error: any) {
     console.error(error);
     throw error;
@@ -291,6 +292,32 @@ export const payOrder = async (payload: any) => {
 export const fetchCustomers = async () => {
   try {
     const response = await api.get(API_ENDPOINTS.customer.fetch);
+    return response.data;
+  } catch (error: any) {
+    throw error?.message;
+  }
+};
+
+export const downloadInvoice = async (orderId: number[]) => {
+  try {
+    const response = await api.post(
+      `${API_ENDPOINTS.invoice.generateForMultipleOrders}?timeZone=${
+        Intl.DateTimeFormat().resolvedOptions().timeZone
+      }`,
+      orderId,
+      {
+        responseType: "blob" as "json",
+      }
+    );
+    const blob = new Blob([response?.data], {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "invoice-" + orderId?.[0] + ".docx";
+    a.click();
+    window.URL.revokeObjectURL(url);
     return response.data;
   } catch (error: any) {
     throw error?.message;

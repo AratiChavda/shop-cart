@@ -157,7 +157,7 @@ const OcMappingForm = ({ mappingId, handleCancel }: OcMappingFormProps) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="w-full max-w-6xl mx-auto p-4 sm:p-6 lg:p-8"
+      className="w-full max-w-6xl mx-auto"
     >
       <div className="mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
@@ -168,7 +168,10 @@ const OcMappingForm = ({ mappingId, handleCancel }: OcMappingFormProps) => {
         </p>
       </div>
 
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-8 p-4 sm:p-6 lg:p-8 bg-white shadow-lg rounded-lg"
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <motion.div
             initial={{ opacity: 0, x: 20 }}

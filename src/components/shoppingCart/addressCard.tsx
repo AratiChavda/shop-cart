@@ -19,7 +19,7 @@ export const AddressCard = ({
 
   return (
     <div
-      className={`relative rounded-xl border-2 p-4 transition-all cursor-pointer shadow-sm bg-white
+      className={`relative rounded-xl border-1 p-4 transition-all cursor-pointer shadow-sm bg-white
         ${
           isSelected
             ? "border-primary bg-primary/5"

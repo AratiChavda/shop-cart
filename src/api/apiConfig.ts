@@ -34,6 +34,10 @@ const API_ENDPOINTS = {
   payment: {
     pay: `${API_BASE_URL}/v1/payment/pay`,
   },
+  invoice: {
+    generateForMultipleOrders: `${API_BASE_URL}/v1/invoice/generateForMultiple`,
+    generate: `${API_BASE_URL}/v1/invoice/generate`,
+  },
   entityData: `${API_BASE_URL}/v1/data/fetch`,
   location: {
     countries:

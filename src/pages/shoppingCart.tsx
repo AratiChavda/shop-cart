@@ -4,7 +4,16 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
-import { ArrowRightIcon, MinusIcon, PlusIcon, TrashIcon } from "lucide-react";
+import {
+  ArrowRight,
+  Minus,
+  Plus,
+  Trash2,
+  Loader2,
+  MapPin,
+  CreditCard,
+  Package,
+} from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -25,6 +34,7 @@ import {
 import { ADDRESS_CATEGORY } from "@/constant/common";
 import type { Address } from "@/types";
 import { useUser } from "@/hooks/useUser";
+import { useCart } from "@/hooks/useCart";
 
 interface CartItem {
   id: number;
@@ -33,10 +43,7 @@ interface CartItem {
   unitPrice: number;
   totalPrice: number;
   journalConfiguration: {
-    orderClass: {
-      ocId: number;
-      orderClassName: string;
-    };
+    orderClass: { ocId: number; orderClassName: string };
     journalCoverImgSrc?: string;
   };
   shippingAddress: Address;
@@ -45,18 +52,19 @@ interface CartItem {
 
 const ShoppingCart = () => {
   const { journalBrowseURL } = useClient();
+  const navigate = useNavigate();
+  const { user } = useUser();
+  const { fetchCartCount } = useCart();
+
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [isLoading, setIsLoading] = useState<{
-    placeOrder: boolean;
-    shipping: boolean;
-    billing: boolean;
-    cart: boolean;
-  }>({
+  const [isLoading, setIsLoading] = useState({
     placeOrder: false,
     shipping: false,
     billing: false,
-    cart: false,
+    cart: true,
+    firstLoad: true,
   });
+
   const [billingAddress, setBillingAddress] = useState<Address | null>(null);
   const [shippingAddress, setShippingAddress] = useState<Address[]>([]);
   const [couponCode, setCouponCode] = useState("");
@@ -65,17 +73,15 @@ const ShoppingCart = () => {
   const [discount, setDiscount] = useState(0);
   const [selectedAddressId, setSelectedAddressId] = useState<
     number | undefined
-  >(undefined);
+  >();
   const [sameAsBilling, setSameAsBilling] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [tax] = useState(0.1); // 10% tax rate
   const [isSticky, setIsSticky] = useState(false);
-  const navigate = useNavigate();
-  const { user } = useUser();
+  const tax = 0;
 
   const fetchBillingAddress = useCallback(async () => {
     if (!user?.customer.customerId) return null;
-    setIsLoading((prev) => ({ ...prev, billing: true }));
+    setIsLoading((p) => ({ ...p, billing: true }));
     try {
       const payload = {
         class: "CustomerAddresses",
@@ -84,7 +90,7 @@ const ShoppingCart = () => {
           {
             path: "customer.customerId",
             operator: "equals",
-            value: user?.customer.customerId.toString(),
+            value: user.customer.customerId.toString(),
           },
           {
             path: "address.addressCategory",
@@ -98,19 +104,19 @@ const ShoppingCart = () => {
           },
         ],
       };
-      const response = await fetchEntityData(payload);
-      return response.content?.[0]?.address || null;
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to fetch billing address");
+      const { content } = await fetchEntityData(payload);
+      return content?.[0]?.address ?? null;
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to fetch billing address");
       return null;
     } finally {
-      setIsLoading((prev) => ({ ...prev, billing: false }));
+      setIsLoading((p) => ({ ...p, billing: false }));
     }
   }, [user?.customer.customerId]);
 
   const fetchShippingAddresses = useCallback(async () => {
     if (!user?.customer.customerId) return [];
-    setIsLoading((prev) => ({ ...prev, shipping: true }));
+    setIsLoading((p) => ({ ...p, shipping: true }));
     try {
       const payload = {
         class: "CustomerAddresses",
@@ -119,7 +125,7 @@ const ShoppingCart = () => {
           {
             path: "customer.customerId",
             operator: "equals",
-            value: user?.customer.customerId.toString(),
+            value: user.customer.customerId.toString(),
           },
           {
             path: "address.addressCategory",
@@ -133,154 +139,117 @@ const ShoppingCart = () => {
           },
         ],
       };
-      const response = await fetchEntityData(payload);
-      return response.content?.map((addr: any) => addr.address) || [];
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to fetch shipping addresses");
+      const { content } = await fetchEntityData(payload);
+      return content?.map((a: any) => a.address) ?? [];
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to fetch shipping addresses");
       return [];
     } finally {
-      setIsLoading((prev) => ({ ...prev, shipping: false }));
+      setIsLoading((p) => ({ ...p, shipping: false }));
     }
   }, [user?.customer.customerId]);
 
   const fetchCart = useCallback(async () => {
     if (!user?.id) return null;
-    setIsLoading((prev) => ({ ...prev, cart: true }));
+    setIsLoading((p) => ({ ...p, cart: true }));
     try {
       const payload = {
         class: "ShoppingCart",
-        filters: [
-          {
-            path: "user.id",
-            operator: "equals",
-            value: user.id,
-          },
-        ],
+        filters: [{ path: "user.id", operator: "equals", value: user.id }],
         fields:
           "shippingAddress.addressId, billingAddress.addressId, cartItems.itemType, cartItems.itemId, cartItems.itemName, cartItems.quantity, cartItems.unitPrice, cartItems.totalPrice, cartItems.journalConfiguration.orderClass.ocId, cartItems.journalConfiguration.orderClass.orderClassName",
       };
-      const response = await fetchEntityData(payload);
-      const cartItems = response.content?.[0]?.cartItems || [];
+      const { content } = await fetchEntityData(payload);
+      const cartItems = content?.[0]?.cartItems ?? [];
+
       if (cartItems.length) {
-        const uniqueOcIds = Array.from(
+        const ocIds = Array.from(
           new Set(
-            cartItems.map(
-              (item: CartItem) => item.journalConfiguration.orderClass.ocId
-            )
+            cartItems.map((i: any) => i.journalConfiguration.orderClass.ocId)
           )
         );
-        if (uniqueOcIds.length > 0) {
-          const imagePayload = {
+        if (ocIds.length) {
+          const imgPayload = {
             class: "OcMapping",
             fields: "orderClass.ocId,journalCoverImgSrc",
             filters: [
               {
                 path: "orderClass.ocId",
                 operator: "in",
-                value: uniqueOcIds.join(","),
+                value: ocIds.join(","),
               },
             ],
           };
-          const imageResponse = await fetchEntityData(imagePayload);
-          cartItems.forEach((item: CartItem) => {
-            const mapping = imageResponse.content?.find(
-              (m: any) =>
-                m.orderClass.ocId === item.journalConfiguration.orderClass.ocId
+          const imgRes = await fetchEntityData(imgPayload);
+          cartItems.forEach((i: CartItem) => {
+            const m = imgRes.content?.find(
+              (x: any) =>
+                x.orderClass.ocId === i.journalConfiguration.orderClass.ocId
             );
-            if (mapping) {
-              item.journalConfiguration.journalCoverImgSrc =
-                mapping.journalCoverImgSrc;
-            }
+            if (m)
+              i.journalConfiguration.journalCoverImgSrc = m.journalCoverImgSrc;
           });
         }
       }
-      return { cartItems, cartData: response.content?.[0] };
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to fetch cart");
+      return { cartItems, cartData: content?.[0] };
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to fetch cart");
       return null;
     } finally {
-      setIsLoading((prev) => ({ ...prev, cart: false }));
+      setIsLoading((p) => ({ ...p, cart: false, firstLoad: false }));
     }
   }, [user?.id]);
 
   const fetchAllData = useCallback(async () => {
     if (!user?.id || !user?.customer.customerId) return;
     try {
-      const [billingAddressData, shippingAddressData, cartResult] =
-        await Promise.all([
-          fetchBillingAddress(),
-          fetchShippingAddresses(),
-          fetchCart(),
-        ]);
+      const [billing, shipping, cartRes] = await Promise.all([
+        fetchBillingAddress(),
+        fetchShippingAddresses(),
+        fetchCart(),
+      ]);
 
-      if (cartResult?.cartItems) {
-        setCart(cartResult.cartItems);
-      } else {
-        setCart([]);
-      }
+      setCart(cartRes?.cartItems ?? []);
+      setBillingAddress(billing);
+      setShippingAddress(shipping);
 
-      setBillingAddress(billingAddressData);
-      setShippingAddress(shippingAddressData);
-
-      if (cartResult?.cartData) {
-        const cartBillingAddressId =
-          cartResult.cartData.billingAddress?.addressId;
-        const cartShippingAddressId =
-          cartResult.cartData.shippingAddress?.addressId;
-
-        const isValidShippingAddress = shippingAddressData.some(
-          (addr: Address) => addr.addressId === cartShippingAddressId
+      if (cartRes?.cartData) {
+        const cartBillId = cartRes.cartData.billingAddress?.addressId;
+        const cartShipId = cartRes.cartData.shippingAddress?.addressId;
+        const validShip = shipping.some(
+          (a: Address) => a.addressId === cartShipId
         );
-
-        setSelectedAddressId(
-          isValidShippingAddress ? cartShippingAddressId : undefined
-        );
-
+        setSelectedAddressId(validShip ? cartShipId : undefined);
         setSameAsBilling(
-          isValidShippingAddress &&
-            cartBillingAddressId &&
-            cartShippingAddressId &&
-            cartBillingAddressId === cartShippingAddressId
+          validShip && cartBillId && cartShipId && cartBillId === cartShipId
         );
       }
     } catch {
-      toast.error("Failed to fetch initial data");
+      toast.error("Failed to load cart data");
     }
-  }, [
-    fetchBillingAddress,
-    fetchShippingAddresses,
-    fetchCart,
-    user?.id,
-    user?.customer.customerId,
-  ]);
+  }, [fetchBillingAddress, fetchShippingAddresses, fetchCart, user]);
 
   const saveAddresses = useCallback(
-    async (newSelectedAddressId: number | undefined) => {
-      if (!billingAddress || !newSelectedAddressId) {
-        return;
-      }
+    async (newId: number | undefined) => {
+      if (!billingAddress || !newId) return;
       try {
         const payload = {
-          shippingAddressId: newSelectedAddressId,
+          shippingAddressId: newId,
           billingAddressId: billingAddress.addressId,
         };
-        const response = await setCartAddress(payload);
-        if (response?.success) {
-          toast.success("Addresses saved successfully");
-        } else {
-          toast.error("Failed to save addresses");
-        }
-      } catch (error: any) {
-        toast.error(error?.message || "Failed to save addresses");
+        const res = await setCartAddress(payload);
+        toast.success(res?.success ? "Addresses saved" : "Failed to save");
+      } catch (e: any) {
+        toast.error(e?.message ?? "Failed to save addresses");
       }
     },
     [billingAddress]
   );
 
   useEffect(() => {
-    const handleScroll = () => setIsSticky(window.scrollY > 100);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    const onScroll = () => setIsSticky(window.scrollY > 80);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
@@ -288,25 +257,18 @@ const ShoppingCart = () => {
   }, [fetchAllData]);
 
   const handleApplyPromoCode = async () => {
-    if (!couponCode) {
-      setPromoError("Please enter a promo code");
-      return;
-    }
+    if (!couponCode.trim()) return setPromoError("Please enter a promo code");
     setIsApplyingPromo(true);
     setPromoError("");
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const isValidPromo = couponCode.toUpperCase() === "SAVE20";
-      if (isValidPromo) {
-        const subtotal = parseFloat(calculateSubtotal());
-        const discountAmount = subtotal * 0.2;
-        setDiscount(discountAmount);
-        toast.success("Promo code applied!");
+      await new Promise((r) => setTimeout(r, 800));
+      if (couponCode.toUpperCase() === "SAVE20") {
+        const sub = parseFloat(calculateSubtotal());
+        setDiscount(sub * 0.2);
+        toast.success("20% off applied!");
       } else {
         setPromoError("Invalid promo code");
       }
-    } catch {
-      setPromoError("Failed to apply promo code");
     } finally {
       setIsApplyingPromo(false);
     }
@@ -319,9 +281,9 @@ const ShoppingCart = () => {
     toast.info("Promo code removed");
   };
 
-  const handleSameAsBilling = (checked: boolean) => {
-    setSameAsBilling(checked);
-    if (checked && billingAddress) {
+  const handleSameAsBilling = (c: boolean) => {
+    setSameAsBilling(c);
+    if (c && billingAddress) {
       setSelectedAddressId(billingAddress.addressId);
       saveAddresses(billingAddress.addressId);
     } else {
@@ -330,62 +292,43 @@ const ShoppingCart = () => {
   };
 
   const handleCheckout = async () => {
-    if (!selectedAddressId) {
-      toast.error("Please select a shipping address");
-      return;
-    }
-    setIsLoading((prev) => ({ ...prev, placeOrder: true }));
+    if (!selectedAddressId) return toast.error("Select a shipping address");
+    setIsLoading((p) => ({ ...p, placeOrder: true }));
     try {
-      const response = await placeOrder();
-      if (!response?.success) {
-        throw new Error(response?.message || "Failed to place order");
-      }
-      const orderIds = response?.data?.orderId || [];
-      toast.success("Order placed successfully");
-      navigate("/dashboard/checkout", { state: { orderIds } });
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to place order");
+      const res = await placeOrder();
+      if (!res?.success) throw new Error(res?.message ?? "Order failed");
+      toast.success("Order placed!");
+      await fetchCartCount();
+      navigate("/dashboard/checkout", {
+        state: { orderIds: res?.data?.orderId ?? [] },
+      });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to place order");
     } finally {
-      setIsLoading((prev) => ({ ...prev, placeOrder: false }));
+      setIsLoading((p) => ({ ...p, placeOrder: false }));
     }
   };
 
-  const calculateSubtotal = () => {
-    return cart
-      .reduce(
-        (total: number, item: CartItem) => total + (item.totalPrice || 0),
-        0
-      )
-      .toFixed(2);
-  };
-
+  const calculateSubtotal = () =>
+    cart.reduce((t, i) => t + i.totalPrice, 0).toFixed(2);
   const calculateTotal = () => {
-    const subtotal = parseFloat(calculateSubtotal());
-    const discountAmount = parseFloat(discount.toFixed(2));
-    return ((subtotal - discountAmount) * (1 + tax)).toFixed(2);
+    const sub = parseFloat(calculateSubtotal());
+    const disc = parseFloat(discount.toFixed(2));
+    return ((sub - disc) * (1 + tax)).toFixed(2);
   };
 
   const refreshCart = async () => {
-    try {
-      const cartResult = await fetchCart();
-      if (cartResult?.cartItems) {
-        setCart(cartResult.cartItems);
-      } else {
-        setCart([]);
-      }
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to fetch cart");
-    }
+    const r = await fetchCart();
+    setCart(r?.cartItems ?? []);
   };
 
-  const handleQuantityChange = async (id: number, quantity: number) => {
-    if (quantity < 1) return;
+  const handleQuantityChange = async (id: number, qty: number) => {
+    if (qty < 1) return;
     try {
-      const payload = { cartItemId: id, quantity };
-      await updateCartItemQuantity(payload);
+      await updateCartItemQuantity({ cartItemId: id, quantity: qty });
       refreshCart();
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to update quantity");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Update failed");
     }
   };
 
@@ -393,176 +336,228 @@ const ShoppingCart = () => {
     try {
       await deleteCartItem(id);
       refreshCart();
-      toast.success("Item removed from cart");
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to remove item");
+      fetchCartCount();
+      toast.success("Item removed");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Remove failed");
     }
   };
 
-  const displayAddresses = sameAsBilling ? [billingAddress] : shippingAddress;
+  const displayAddresses =
+    sameAsBilling && billingAddress ? [billingAddress] : shippingAddress;
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      {cart.length === 0 ? (
+    <>
+      {isLoading.firstLoad ? (
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="h-8 bg-gray-200 rounded-lg w-40 animate-pulse" />
+          {[...Array(2)].map((_, i) => (
+            <div
+              key={i}
+              className="bg-white/70 backdrop-blur-sm border border-gray-100 rounded-2xl p-5 animate-pulse"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-gray-200 rounded-xl" />
+                <div className="space-y-2 flex-1">
+                  <div className="h-5 bg-gray-200 rounded w-3/4" />
+                  <div className="h-4 bg-gray-200 rounded w-1/2" />
+                </div>
+              </div>
+            </div>
+          ))}
+          <div className="bg-white/70 backdrop-blur-sm border border-gray-100 rounded-2xl p-6 space-y-4 animate-pulse">
+            <div className="h-7 bg-gray-200 rounded w-1/3" />
+            <div className="h-12 bg-gray-100 rounded-lg" />
+          </div>
+        </div>
+      ) : cart.length === 0 ? (
         <motion.div
-          initial={{ scale: 0.95 }}
-          animate={{ scale: 1 }}
-          className="text-center py-16 bg-primary/5 ring-1 ring-primary/10 rounded-xl shadow-sm"
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="max-w-md mx-auto text-center py-20"
         >
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-            Your Cart is Empty
+          <div className="w-20 h-20 mx-auto mb-6 bg-primary/5 rounded-full flex items-center justify-center">
+            <Package className="w-10 h-10 text-primary/60" />
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-light text-gray-900 mb-3">
+            Your cart is empty
           </h2>
-          <p className="text-gray-600 mb-6">
-            Start exploring our collection of journals!
+          <p className="text-gray-500 mb-8">
+            Explore journals and start writing.
           </p>
           <Button
-            className="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-full"
-            onClick={() => (window.location.href = journalBrowseURL)}
+            size="lg"
+            className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white rounded-full shadow-sm"
+            onClick={() => navigate(journalBrowseURL)}
           >
-            Browse Journals <ArrowRightIcon className="ml-2 h-4 w-4" />
+            Browse Journals <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </motion.div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-4">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              Shopping Cart
-            </h2>
-            <AnimatePresence>
-              {cart.map((item) => (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.3 }}
-                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-center gap-4 w-full sm:w-auto">
-                    <img
-                      src={
-                        item.journalConfiguration.journalCoverImgSrc ||
-                        "/images/placeholder.jpg"
-                      }
-                      alt={item.journalConfiguration.orderClass.orderClassName}
-                      className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-md border border-gray-200"
-                      onError={(e) =>
-                        (e.currentTarget.src = "/images/placeholder.jpg")
-                      }
-                    />
-                    <div className="space-y-1 flex-1">
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-800">
-                        {item.itemName}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        Price: ${item.totalPrice.toFixed(2)}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Quantity: {item.quantity}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 mt-4 sm:mt-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        handleQuantityChange(item.id, item.quantity - 1)
-                      }
-                      disabled={item.quantity <= 1}
-                      aria-label="Decrease quantity"
-                    >
-                      <MinusIcon className="h-4 w-4" />
-                    </Button>
-                    <span className="text-sm font-medium text-gray-700 w-8 text-center">
-                      {item.quantity}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        handleQuantityChange(item.id, item.quantity + 1)
-                      }
-                      aria-label="Increase quantity"
-                    >
-                      <PlusIcon className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteItem(item.id)}
-                      aria-label="Remove item"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+            <div className="lg:col-span-2 space-y-5">
+              <motion.h2
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-xl sm:text-2xl font-medium text-gray-900"
+              >
+                Your Cart
+              </motion.h2>
 
-          <motion.div
-            className={`p-6 bg-white rounded-lg shadow-lg lg:sticky top-4 transition-shadow ${
-              isSticky ? "lg:shadow-xl" : ""
-            }`}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <h3 className="text-xl font-bold text-gray-800 mb-6">
-              Order Summary
-            </h3>
-            <div className="space-y-6">
+              <div className="space-y-4">
+                <AnimatePresence>
+                  {cart.map((item) => (
+                    <motion.div
+                      key={item.id}
+                      layout
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.98 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 30,
+                      }}
+                      className="bg-white backdrop-blur-sm border border-gray-100 rounded-2xl p-4 hover:border-gray-200 transition-colors"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 flex-1">
+                          <div className="relative flex-shrink-0">
+                            <img
+                              src={
+                                item.journalConfiguration.journalCoverImgSrc ||
+                                "/images/placeholder.jpg"
+                              }
+                              alt={item.itemName}
+                              className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-xl border border-gray-100"
+                              onError={(e) =>
+                                (e.currentTarget.src =
+                                  "/images/placeholder.jpg")
+                              }
+                            />
+                            <div className="absolute -top-1 -right-1 bg-primary text-white text-xs font-medium w-5 h-5 rounded-full flex items-center justify-center">
+                              {item.quantity}
+                            </div>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-medium text-gray-900 truncate">
+                              {item.itemName}
+                            </h3>
+                            <p className="text-xs sm:text-sm text-gray-500">
+                              {
+                                item.journalConfiguration.orderClass
+                                  .orderClassName
+                              }
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between sm:justify-end gap-2">
+                          <div className="flex items-center gap-1 bg-primary/5 rounded-full p-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-full bg-primary hover:bg-primary/90 hover:text-primary-foreground text-primary-foreground"
+                              onClick={() =>
+                                handleQuantityChange(item.id, item.quantity - 1)
+                              }
+                              disabled={item.quantity <= 1}
+                            >
+                              <Minus className="h-3.5 w-3.5" />
+                            </Button>
+                            <span className="w-8 text-center text-sm font-medium">
+                              {item.quantity}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-full bg-primary hover:bg-primary/90 hover:text-primary-foreground text-primary-foreground"
+                              onClick={() =>
+                                handleQuantityChange(item.id, item.quantity + 1)
+                              }
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:bg-red-50 rounded-full"
+                            onClick={() => handleDeleteItem(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <span className="font-medium text-gray-900 min-w-16 text-right text-sm sm:text-base">
+                            ${item.totalPrice.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`bg-white backdrop-blur-md border border-gray-100 rounded-2xl p-5 lg:p-6 space-y-5 transition-all ${
+                isSticky ? "lg:shadow-lg lg:ring-1 lg:ring-black/5" : ""
+              } lg:sticky lg:top-6 lg:self-start`}
+            >
+              <h3 className="text-lg sm:text-xl font-medium text-gray-900">
+                Order Summary
+              </h3>
+
               <div>
-                <label className="text-sm font-medium text-gray-600 mb-2 block">
+                <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
+                  <CreditCard className="h-4 w-4" />
                   Billing Address
-                </label>
-                {billingAddress ? (
-                  <AddressCard address={billingAddress} showIcons={false} />
-                ) : (
-                  <p className="text-sm text-gray-500">
-                    No billing address available
-                  </p>
-                )}
+                </div>
+                <p className="text-sm text-gray-600 pl-6">
+                  {billingAddress ? (
+                    <AddressCard address={billingAddress} showIcons={false} />
+                  ) : (
+                    <p className="text-sm text-gray-500">
+                      No billing address available
+                    </p>
+                  )}
+                </p>
               </div>
 
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="text-sm font-medium text-gray-600">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <MapPin className="h-4 w-4" />
                     Shipping Address
-                  </label>
+                  </div>
                   <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                     <SheetTrigger
                       disabled={sameAsBilling}
-                      className="text-primary underline text-sm font-medium disabled:opacity-50"
+                      className="text-primary hover:underline text-xs sm:text-sm font-medium disabled:opacity-50"
                     >
-                      Select
+                      Change
                     </SheetTrigger>
                     <SheetContent
                       side="right"
                       className="max-h-screen overflow-y-auto p-6 sm:max-w-lg w-full"
                     >
                       <SheetHeader>
-                        <SheetTitle className="text-xl font-bold text-center">
+                        <SheetTitle className="text-lg">
                           Select Shipping Address
                         </SheetTitle>
                       </SheetHeader>
                       <div className="grid grid-cols-1 gap-4 mt-4">
-                        {displayAddresses.map((address) => (
+                        {displayAddresses.map((a) => (
                           <AddressCard
-                            key={address?.addressId}
-                            address={address}
-                            isSelected={
-                              selectedAddressId === address?.addressId
-                            }
+                            key={a.addressId}
+                            address={a}
+                            isSelected={selectedAddressId === a.addressId}
                             onClick={() => {
-                              setSelectedAddressId(address?.addressId);
+                              setSelectedAddressId(a.addressId);
                               setIsSheetOpen(false);
-                              saveAddresses(address?.addressId);
+                              saveAddresses(a.addressId);
                             }}
                           />
                         ))}
@@ -570,70 +565,83 @@ const ShoppingCart = () => {
                     </SheetContent>
                   </Sheet>
                 </div>
-                <div className="flex items-center gap-2 mb-3">
+
+                <div className="flex items-center gap-2 mb-2 pl-6">
                   <Checkbox
-                    id="sameAsBilling"
+                    id="same"
                     checked={sameAsBilling}
                     onCheckedChange={handleSameAsBilling}
                   />
                   <label
-                    htmlFor="sameAsBilling"
-                    className="text-sm font-medium text-gray-600"
+                    htmlFor="same"
+                    className="text-xs sm:text-sm text-gray-600 cursor-pointer"
                   >
-                    Same as Billing Address
+                    Same as billing address
                   </label>
                 </div>
-                {sameAsBilling && billingAddress ? (
-                  <AddressCard address={billingAddress} showIcons={false} />
-                ) : selectedAddressId ? (
-                  <AddressCard
-                    address={
-                      shippingAddress.find(
-                        (a) => a.addressId === selectedAddressId
-                      )!
-                    }
-                    showIcons={false}
-                  />
-                ) : (
-                  <p className="text-sm text-gray-500">
-                    Please select a shipping address
-                  </p>
-                )}
+
+                <p className="text-sm text-gray-600 pl-6">
+                  {sameAsBilling && billingAddress ? (
+                    <AddressCard address={billingAddress} showIcons={false} />
+                  ) : selectedAddressId ? (
+                    <AddressCard
+                      address={
+                        shippingAddress.find(
+                          (a) => a.addressId === selectedAddressId
+                        )!
+                      }
+                      showIcons={false}
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-500">
+                      Please select a shipping address
+                    </p>
+                  )}
+                </p>
               </div>
 
               <div>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Enter promo code"
+                    placeholder="Promo code"
                     value={couponCode}
                     onChange={(e) => setCouponCode(e.target.value)}
-                    className="rounded-md"
+                    className="rounded-xl text-sm"
+                    disabled={discount > 0}
                   />
                   {discount > 0 ? (
-                    <Button variant="outline" onClick={handleRemovePromo}>
+                    <Button
+                      variant="outline"
+                      onClick={handleRemovePromo}
+                      className="rounded-xl text-xs sm:text-sm"
+                    >
                       Remove
                     </Button>
                   ) : (
                     <Button
                       onClick={handleApplyPromoCode}
                       disabled={isApplyingPromo}
-                      className="rounded-md"
+                      className="rounded-xl text-xs sm:text-sm"
                     >
-                      {isApplyingPromo ? "Applying..." : "Apply"}
+                      {isApplyingPromo ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Apply"
+                      )}
                     </Button>
                   )}
                 </div>
                 {promoError && (
-                  <p className="text-red-500 text-sm mt-1">{promoError}</p>
+                  <p className="text-red-500 text-xs mt-1 pl-1">{promoError}</p>
                 )}
                 {discount > 0 && (
-                  <p className="text-green-600 text-sm mt-1">
-                    Promo code applied! You saved ${discount.toFixed(2)}
+                  <p className="text-green-600 text-sm mt-1 font-medium pl-1">
+                    Saved ${discount.toFixed(2)}
                   </p>
                 )}
               </div>
 
-              <div className="space-y-3 border-t pt-4">
+              <div className="border-t pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal</span>
                   <span className="font-medium">${calculateSubtotal()}</span>
@@ -642,39 +650,46 @@ const ShoppingCart = () => {
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Discount</span>
                     <span className="font-medium text-green-600">
-                      -${discount.toFixed(2)}
+                      −${discount.toFixed(2)}
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Tax (10%)</span>
                   <span className="font-medium">
-                    $
-                    {(
-                      (parseFloat(calculateSubtotal()) -
-                        parseFloat(discount.toFixed(2))) *
+                    $ 0
+                    {/* {(
+                      (parseFloat(calculateSubtotal()) - discount) *
                       tax
-                    ).toFixed(2)}
+                    ).toFixed(2)} */}
                   </span>
                 </div>
-                <div className="flex justify-between text-base font-bold">
+                <div className="flex justify-between text-base sm:text-lg font-semibold pt-3 border-t">
                   <span>Total</span>
-                  <span>${calculateTotal()}</span>
+                  <span className="text-primary">${calculateTotal()}</span>
                 </div>
               </div>
 
               <Button
-                className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-full"
+                size="lg"
+                className="w-full bg-primary hover:bg-primary/90 text-white rounded-xl font-medium shadow-sm text-sm sm:text-base"
                 onClick={handleCheckout}
                 disabled={!selectedAddressId || isLoading.placeOrder}
               >
-                {isLoading.placeOrder ? "Processing..." : "Proceed to Checkout"}
+                {isLoading.placeOrder ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Processing…
+                  </>
+                ) : (
+                  "Proceed to Checkout"
+                )}
               </Button>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </div>
       )}
-    </motion.div>
+    </>
   );
 };
 

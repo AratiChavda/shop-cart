@@ -28,6 +28,7 @@ import { fetchEntityData, fetchPricing, setCartItem } from "@/api/apiServices";
 import { JOURNAL_ITEM_TYPE, OC_ORDER_TYPE } from "@/constant/common";
 import type { Category } from "@/types";
 import { formatDate } from "@/utils/common";
+import { useClient } from "@/hooks/useClient";
 
 const journalSchema = z
   .object({
@@ -63,6 +64,7 @@ interface JournalPageProps {
 }
 
 const JournalPage: React.FC<JournalPageProps> = ({ user }) => {
+  const { clientName } = useClient();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [data, setData] = useState<any[]>([]);
@@ -317,199 +319,209 @@ const JournalPage: React.FC<JournalPageProps> = ({ user }) => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 min-h-screen">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="space-y-6"
-      >
-        <Card className="shadow-lg rounded-lg overflow-hidden">
-          <CardHeader>
-            <CardTitle className="text-2xl font-semibold text-primary">
-              Purchase - {data?.[0]?.orderClass?.orderClassName}
-            </CardTitle>
-            <p className="text-sm text-gray-500">Customize your subscription</p>
-          </CardHeader>
-          <CardContent className="py-3 px-6">
-            <div className="flex flex-col md:flex-row gap-6">
-              <motion.div
-                className="md:w-1/3"
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.4 }}
-              >
-                <div className="relative group">
-                  <img
-                    src={journal?.journalCoverImgSrc}
-                    alt={journal?.orderClassName}
-                    className="rounded-lg object-cover aspect-[3/4] w-full shadow-md transition-transform duration-300 group-hover:scale-102"
-                  />
-                  <div className="absolute inset-0 bg-primary/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                </div>
-              </motion.div>
-              <div className="md:w-2/3 space-y-4">
-                <Form {...form}>
-                  <form
-                    onSubmit={form.handleSubmit(onSubmit)}
-                    className="space-y-4"
-                  >
-                    <FormField
-                      name="customerCategory"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Customer Type</FormLabel>
-                          <Select
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              onCategoryChange(value);
-                            }}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="w-96">
-                                <SelectValue placeholder="Select category" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {categories.map((cat) => (
-                                <SelectItem
-                                  key={cat.CustomerCategoryId}
-                                  value={cat.CustomerCategoryId}
-                                >
-                                  {cat.custCategory}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+    <div className="bg-background">
+      <div className="max-w-5xl mx-auto px-4 py-8 min-h-screen">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="space-y-6"
+        >
+          <Card className="shadow-lg rounded-lg overflow-hidden">
+            <CardHeader>
+              <CardTitle className="text-2xl font-semibold text-primary">
+                Purchase - {data?.[0]?.orderClass?.orderClassName}
+              </CardTitle>
+              <p className="text-sm text-gray-500">
+                Customize your subscription
+              </p>
+            </CardHeader>
+            <CardContent className="py-3 px-6">
+              <div className="flex flex-col md:flex-row gap-6">
+                <motion.div
+                  className="md:w-1/3"
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <div className="relative group">
+                    <img
+                      src={journal?.journalCoverImgSrc}
+                      alt={journal?.orderClassName}
+                      className="rounded-lg object-cover aspect-[3/4] w-full shadow-md transition-transform duration-300 group-hover:scale-102"
                     />
-
-                    <FormField
-                      name="description"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Product Description</FormLabel>
-                          <Select
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              onProductChange();
-                            }}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="w-96">
-                                <SelectValue placeholder="Select product description" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {products.map((product) => (
-                                <SelectItem key={product.id} value={product.id}>
-                                  {product.description}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {watch("orderType") === OC_ORDER_TYPE.SINGLE_ISSUE && (
+                    <div className="absolute inset-0 bg-primary/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </div>
+                </motion.div>
+                <div className="md:w-2/3 space-y-4">
+                  <Form {...form}>
+                    <form
+                      onSubmit={form.handleSubmit(onSubmit)}
+                      className="space-y-4"
+                    >
                       <FormField
-                        name="issue"
+                        name="customerCategory"
                         control={form.control}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Issue</FormLabel>
-                            <div className="relative">
-                              <Select
-                                onValueChange={(value) => {
-                                  field.onChange(value);
-                                  calculatePrice();
-                                }}
-                                disabled={isLoading.issue}
-                                defaultValue={field.value || ""}
-                              >
-                                <FormControl>
-                                  <SelectTrigger className="w-96">
-                                    <SelectValue placeholder="Select issue" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {issues.map((issue) => (
-                                    <SelectItem key={issue.id} value={issue.id}>
-                                      {issue?.enumeration} (
-                                      {formatDate(
-                                        issue?.issueDate,
-                                        "mm/dd/yyyy"
-                                      )}
-                                      )
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              {/* {isLoading.issue && (
-                                <Icons.loader className="animate-spin absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
-                              )} */}
-                            </div>
+                            <FormLabel>Customer Type</FormLabel>
+                            <Select
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                onCategoryChange(value);
+                              }}
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="w-96">
+                                  <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {categories.map((cat) => (
+                                  <SelectItem
+                                    key={cat.CustomerCategoryId}
+                                    value={cat.CustomerCategoryId}
+                                  >
+                                    {cat.custCategory}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                    )}
 
-                    <FormField
-                      name="quantity"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Quantity</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min={1}
-                              value={field.value}
-                              onChange={(e) => {
-                                field.onChange(Number(e.target.value));
-                                calculatePrice();
+                      <FormField
+                        name="description"
+                        control={form.control}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Product Description</FormLabel>
+                            <Select
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                onProductChange();
                               }}
-                              className="w-96"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="w-96">
+                                  <SelectValue placeholder="Select product description" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {products.map((product) => (
+                                  <SelectItem
+                                    key={product.id}
+                                    value={product.id}
+                                  >
+                                    {product.description}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <motion.div
-                      className="flex items-center justify-between mt-6 p-4 bg-primary/5 rounded-lg"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <span className="text-lg font-medium text-primary">
-                        Total: ${price.toFixed(2)}
-                      </span>
-                      <Button
-                        type="submit"
-                        className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-6 py-2 shadow-md hover:shadow-lg transition-all duration-200"
+                      {watch("orderType") === OC_ORDER_TYPE.SINGLE_ISSUE && (
+                        <FormField
+                          name="issue"
+                          control={form.control}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Issue</FormLabel>
+                              <div className="relative">
+                                <Select
+                                  onValueChange={(value) => {
+                                    field.onChange(value);
+                                    calculatePrice();
+                                  }}
+                                  disabled={isLoading.issue}
+                                  defaultValue={field.value || ""}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger className="w-96">
+                                      <SelectValue placeholder="Select issue" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {issues.map((issue) => (
+                                      <SelectItem
+                                        key={issue.id}
+                                        value={issue.id}
+                                      >
+                                        {issue?.enumeration} (
+                                        {formatDate(
+                                          issue?.issueDate,
+                                          "MM/dd/yyyy"
+                                        )}
+                                        )
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                {/* {isLoading.issue && (
+                                <Icons.loader className="animate-spin absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
+                              )} */}
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
+                      <FormField
+                        name="quantity"
+                        control={form.control}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Quantity</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min={1}
+                                value={field.value}
+                                onChange={(e) => {
+                                  field.onChange(Number(e.target.value));
+                                  calculatePrice();
+                                }}
+                                className="w-96"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <motion.div
+                        className="flex items-center justify-between mt-6 p-4 bg-primary/5 rounded-lg"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.3 }}
                       >
-                        <Icons.cart className="mr-2 h-5 w-5" />
-                        Add to Cart
-                      </Button>
-                    </motion.div>
-                  </form>
-                </Form>
+                        <span className="text-lg font-medium text-primary">
+                          Total: ${price.toFixed(2)}
+                        </span>
+                        <Button
+                          type="submit"
+                          className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-6 py-2 shadow-md hover:shadow-lg transition-all duration-200"
+                        >
+                          <Icons.cart className="mr-2 h-5 w-5" />
+                          Add to Cart
+                        </Button>
+                      </motion.div>
+                    </form>
+                  </Form>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
     </div>
   );
 };
